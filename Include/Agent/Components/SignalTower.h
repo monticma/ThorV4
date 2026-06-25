@@ -6,6 +6,12 @@
 
 #include "Component.h"
 
+class Controller;
+namespace sol
+{
+    class state;
+}
+
 // -----------------------------------------------------------------------------
 // SignalTower : colonne de signalisation (ex: PATLITE LR6-3)
 // -----------------------------------------------------------------------------
@@ -89,4 +95,16 @@ public:
     SignalTowerPhysical                       physical;
     std::vector<IoPinRequired>                ioPinsRequired;
     SignalTowerMetadata                       metadata;
+
+    // Primitives
+    bool setLight(const std::string& color, const std::string& mode);
+    bool setBuzzer(const std::string& mode);
+    bool applyPattern(const std::string& patternName);
+
+    void setController(Controller* controller) override;
+    void registerInLua(sol::state& lua) override;
+
+private:
+    Controller* mController = nullptr;
+    int getPinForColor(const std::string& color) const;
 };

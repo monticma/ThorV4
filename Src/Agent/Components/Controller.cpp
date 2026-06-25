@@ -1,4 +1,6 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
@@ -254,7 +256,12 @@ void Controller::dump() const
 
 bool Controller::connect(const std::string& address, int commandPort, int messagePort)
 {
-    return mDriver.connect(address, commandPort, messagePort);
+    if (!mDriver.connect(address, commandPort, messagePort))
+    {
+        mLastError = mDriver.lastError();
+        return false;
+    }
+    return true;
 }
 
 void Controller::disconnect()
@@ -285,4 +292,59 @@ void Controller::registerInLua(sol::state& lua)
         "lastError",    &Controller::lastError,
         "dump",         &Controller::dump
     );
+}
+
+// =============================================================================
+// IO Primitives
+// =============================================================================
+
+bool Controller::setDigitalOutput(int pin, bool value)
+{
+    return mDriver.setDigitalOutput(pin, value);
+}
+
+bool Controller::waitDigitalInput(int pin, bool expected, int timeoutMs)
+{
+    // Polling loop — le listener Galil (port 2324) peut interrompre
+    // en publiant un événement, mais pour l'instant on poll.
+    int elapsed = 0;
+    const int pollIntervalMs = 10;
+
+    while (elapsed < timeoutMs)
+    {
+        bool current = false;
+        if (!mDriver.getDigitalInput(pin, current))
+        {
+            mLastError = "Controller::waitDigitalInput: " + mDriver.lastError();
+            return false;
+        }
+        if (current == expected)
+        {
+            return true;
+        }
+        // Pause minimale entre deux polls (10 ms)
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+        elapsed += pollIntervalMs;
+    }
+
+    mLastError = "Controller::waitDigitalInput: timeout waiting for pin "
+               + std::to_string(pin) + " to become "
+               + (expected ? "HIGH" : "LOW");
+    return false;
+}
+
+bool Controller::setAnalogOutput(int channel, double value)
+{
+    (void)channel;
+    (void)value;
+    mLastError = "Controller::setAnalogOutput: not supported by Galil driver";
+    return false;
+}
+
+bool Controller::readAnalogInput(int channel, double& valueOut)
+{
+    (void)channel;
+    valueOut = 0.0;
+    mLastError = "Controller::readAnalogInput: not supported by Galil driver";
+    return false;
 }

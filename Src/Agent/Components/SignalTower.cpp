@@ -1,8 +1,11 @@
 #include <fstream>
+#include <cctype>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/SignalTower.h"
+#include "Agent/Components/Controller.h"
 
 using json = nlohmann::json;
 
@@ -224,4 +227,110 @@ void SignalTower::dump() const
         }
     }
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives
+// =============================================================================
+
+void SignalTower::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+int SignalTower::getPinForColor(const std::string& color) const
+{
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        const auto& io = ioPinsRequired[i];
+        std::string idLower = io.id;
+        std::string colorLower = color;
+        for (auto& c : idLower) c = static_cast<char>(std::tolower(c));
+        for (auto& c : colorLower) c = static_cast<char>(std::tolower(c));
+
+        if (idLower.find(colorLower) != std::string::npos)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool SignalTower::setLight(const std::string& color, const std::string& mode)
+{
+    if (mController == nullptr) {
+        mLastError = "SignalTower::setLight: no controller";
+        return false;
+    }
+
+    int pin = getPinForColor(color);
+    if (pin < 0) {
+        mLastError = "SignalTower::setLight: no pin for color '" + color + "'";
+        return false;
+    }
+
+    bool value = (mode == "on" || mode == "blink");
+
+    if (!mController->setDigitalOutput(pin, value)) {
+        mLastError = "SignalTower::setLight: failed to set pin "
+                     + std::to_string(pin);
+        return false;
+    }
+
+    return true;
+}
+
+bool SignalTower::setBuzzer(const std::string& mode)
+{
+    if (mController == nullptr) {
+        mLastError = "SignalTower::setBuzzer: no controller";
+        return false;
+    }
+
+    // Chercher la pin du buzzer
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        const auto& io = ioPinsRequired[i];
+        if (io.id.find("buzzer") != std::string::npos
+            || io.id.find("Buzzer") != std::string::npos)
+        {
+            bool value = (mode == "on" || mode == "pulse");
+            return mController->setDigitalOutput(static_cast<int>(i), value);
+        }
+    }
+
+    mLastError = "SignalTower::setBuzzer: no buzzer pin configured";
+    return false;
+}
+
+bool SignalTower::applyPattern(const std::string& patternName)
+{
+    auto it = patterns.find(patternName);
+    if (it == patterns.end()) {
+        mLastError = "SignalTower::applyPattern: unknown pattern '" + patternName + "'";
+        return false;
+    }
+
+    const auto& p = it->second;
+    bool ok = true;
+
+    if (!p.green.empty())  ok = setLight("green", p.green) && ok;
+    if (!p.yellow.empty()) ok = setLight("yellow", p.yellow) && ok;
+    if (!p.red.empty())    ok = setLight("red", p.red) && ok;
+    if (!p.buzzer.empty()) ok = setBuzzer(p.buzzer) && ok;
+
+    return ok;
+}
+
+void SignalTower::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<SignalTower>("SignalTower",
+        sol::constructors<SignalTower()>(),
+        "model",         sol::readonly(&SignalTower::model),
+        "manufacturer",  sol::readonly(&SignalTower::manufacturer),
+        "loadFromFile",  &SignalTower::loadFromFile,
+        "setLight",      &SignalTower::setLight,
+        "setBuzzer",     &SignalTower::setBuzzer,
+        "applyPattern",  &SignalTower::applyPattern,
+        "lastError",     &SignalTower::lastError,
+        "dump",          &SignalTower::dump
+    );
 }

@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -75,16 +76,25 @@ bool GalilDriver::connect(const std::string& address, int commandPort, int messa
         return false;
     }
 
-    // Résoudre l'adresse
+    // Résoudre l'adresse (supporte hostnames et IP)
     struct sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr));
+
+    // Essayer d'abord en tant qu'IP dotted-decimal
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(address.c_str());
 
-    if (addr.sin_addr.s_addr == INADDR_NONE) {
-        mLastError = "Invalid address: " + address;
-        disconnect();
-        return false;
+    if (addr.sin_addr.s_addr == INADDR_NONE)
+    {
+        // Résolution DNS pour hostname
+        struct hostent* host = gethostbyname(address.c_str());
+        if (host == nullptr || host->h_addrtype != AF_INET)
+        {
+            mLastError = "Cannot resolve address: " + address;
+            disconnect();
+            return false;
+        }
+        std::memcpy(&addr.sin_addr, host->h_addr, host->h_length);
     }
 
     // Connexion port commande
@@ -115,11 +125,61 @@ bool GalilDriver::connect(const std::string& address, int commandPort, int messa
     }
 
     mConnected = true;
+
+    // =========================================================================
+    // Séquence d'initialisation post-connexion (inspirée de ThorV2)
+    //
+    // Ordre Galil standard :
+    //   1. MO  — Safety: désactive tous les moteurs
+    //   2. ST  — Stop tout mouvement résiduel
+    //   3. SH  — Servo Here : active les moteurs
+    //   4. SP  — Définit la vitesse par défaut (tous les axes)
+    //   5. AC  — Définit l'accélération par défaut
+    //   6. DC  — Définit la décélération par défaut
+    // =========================================================================
+
+    // 1. MO — Motors Off (sécurité au démarrage)
+    sendAndCheck(GalilProtocol::encodeMotorOff(), mDefaultTimeoutMs);
+
+    // 2. ST — Stop (annule tout mouvement résiduel)
+    sendAndCheck(GalilProtocol::encodeStopAll(), mDefaultTimeoutMs);
+
+    // 3. SH — Servo Here (active les moteurs, position courante = référence)
+    if (!sendAndCheck(GalilProtocol::encodeServoHere(), mDefaultTimeoutMs))
+    {
+        // Non-bloquant : les primitives enverront SH si nécessaire
+    }
+
+    // 4. SP — Vitesse par défaut (25000 counts/s sur 8 axes, comme V2)
+    {
+        std::vector<double> defaultSpeeds(8, 25000.0);
+        sendAndCheck(GalilProtocol::encodeSpeed(defaultSpeeds), mDefaultTimeoutMs);
+    }
+
+    // 5. AC — Accélération par défaut (10000 counts/s²)
+    {
+        std::vector<double> defaultAccels(8, 10000.0);
+        sendAndCheck(GalilProtocol::encodeAcceleration(defaultAccels), mDefaultTimeoutMs);
+    }
+
+    // 6. DC — Décélération par défaut (10000 counts/s²)
+    {
+        std::vector<double> defaultDecels(8, 10000.0);
+        sendAndCheck(GalilProtocol::encodeDeceleration(defaultDecels), mDefaultTimeoutMs);
+    }
+
     return true;
 }
 
 void GalilDriver::disconnect()
 {
+    // Séquence d'arrêt (V2) : ST → MO
+    if (mConnected)
+    {
+        sendAndCheck(GalilProtocol::encodeStopAll(), mDefaultTimeoutMs);
+        sendAndCheck(GalilProtocol::encodeMotorOff(), mDefaultTimeoutMs);
+    }
+
     closeSocket(mCommandSocket);
     closeSocket(mMessageSocket);
     mConnected = false;
@@ -293,12 +353,21 @@ bool GalilDriver::servoHere()
 
 bool GalilDriver::home(int axisIndex)
 {
-    std::string cmd = GalilProtocol::encodeHome(axisIndex);
+    // 1. Servo Here — activer le moteur avant le homing
+    //    SH sans argument = tous les axes, mais on ne veut que celui-ci.
+    //    On envoie d'abord SH global (simple), puis HM sur l'axe cible.
+    std::string cmd = GalilProtocol::encodeServoHere();
     if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
         return false;
     }
 
-    // Après HM, lancer BG sur cet axe
+    // 2. Home — lancer la recherche du switch de limite
+    cmd = GalilProtocol::encodeHome(axisIndex);
+    if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
+        return false;
+    }
+
+    // 3. Begin Motion — démarrer le mouvement de homing
     cmd = GalilProtocol::encodeBeginMotion({axisIndex});
     return sendAndCheck(cmd, mDefaultTimeoutMs);
 }

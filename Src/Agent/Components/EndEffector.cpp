@@ -1,8 +1,13 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/EndEffector.h"
+#include "Agent/Components/Controller.h"
+#include "Agent/Drivers/GalilDriver.h"
 
 using json = nlohmann::json;
 
@@ -231,4 +236,117 @@ void EndEffector::dump() const
         }
     }
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives
+// =============================================================================
+
+void EndEffector::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+int EndEffector::getVacuumOutputPin() const
+{
+    // Chercher la pin vacuumOutput dans ioPinsRequired
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        const auto& io = ioPinsRequired[i];
+        if (io.id.find("vacuumOutput") != std::string::npos
+            || io.id.find("Vacuum") != std::string::npos)
+        {
+            return static_cast<int>(i); // l'index comme pin number
+        }
+    }
+    return 0; // fallback
+}
+
+int EndEffector::getVacuumSensorPin() const
+{
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        const auto& io = ioPinsRequired[i];
+        if (io.id.find("vacuumSensor") != std::string::npos
+            || io.id.find("Sensor") != std::string::npos)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return 1; // fallback
+}
+
+bool EndEffector::pick(int settleMs)
+{
+    if (mController == nullptr) {
+        mLastError = "EndEffector::pick: no controller";
+        return false;
+    }
+
+    int pin = getVacuumOutputPin();
+
+    if (!mController->setDigitalOutput(pin, true)) {
+        mLastError = "EndEffector::pick: failed to activate vacuum pin "
+                     + std::to_string(pin);
+        return false;
+    }
+
+    // Temps de stabilisation du vide
+    std::this_thread::sleep_for(std::chrono::milliseconds(settleMs));
+
+    return true;
+}
+
+bool EndEffector::place(int settleMs)
+{
+    if (mController == nullptr) {
+        mLastError = "EndEffector::place: no controller";
+        return false;
+    }
+
+    int pin = getVacuumOutputPin();
+
+    if (!mController->setDigitalOutput(pin, false)) {
+        mLastError = "EndEffector::place: failed to deactivate vacuum pin "
+                     + std::to_string(pin);
+        return false;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(settleMs));
+
+    return true;
+}
+
+bool EndEffector::isWaferPresent()
+{
+    if (mController == nullptr) {
+        return false;
+    }
+
+    int pin = getVacuumSensorPin();
+    bool value = false;
+
+    // Le capteur de vide est une entrée digitale
+    // On utilise waitDigitalInput avec timeout 0 = lecture immédiate
+    if (!mController->waitDigitalInput(pin, true, 0)) {
+        // Si le wait échoue (timeout immédiat), le wafer n'est pas présent
+        return false;
+    }
+
+    return value;
+}
+
+void EndEffector::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<EndEffector>("EndEffector",
+        sol::constructors<EndEffector()>(),
+        "model",         sol::readonly(&EndEffector::model),
+        "manufacturer",  sol::readonly(&EndEffector::manufacturer),
+        "loadFromFile",  &EndEffector::loadFromFile,
+        "pick",          &EndEffector::pick,
+        "place",         &EndEffector::place,
+        "isWaferPresent",&EndEffector::isWaferPresent,
+        "lastError",     &EndEffector::lastError,
+        "dump",          &EndEffector::dump
+    );
 }

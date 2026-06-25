@@ -1,8 +1,13 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/Aligner.h"
+#include "Agent/Components/Controller.h"
+#include "Agent/Drivers/GalilDriver.h"
 
 using json = nlohmann::json;
 
@@ -267,4 +272,137 @@ void Aligner::dump() const
         }
     }
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives
+// =============================================================================
+
+void Aligner::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+bool Aligner::moveTo(double angle, double speed)
+{
+    if (mController == nullptr) {
+        mLastError = "Aligner::moveTo: no controller";
+        return false;
+    }
+
+    // L'aligneur a typiquement 1 axe de rotation (chuck)
+    // angle en degrés, convertir en counts via le driver
+    std::vector<double> counts(8, 0.0);
+    counts[0] = angle; // axe primaire, countsPerUnit appliqué par le driver
+
+    double speedFactor = speed / 100.0;
+    if (speedFactor < 0.01) speedFactor = 0.01;
+    if (speedFactor > 1.0)  speedFactor = 1.0;
+
+    std::vector<double> speedCounts(8, 0.0);
+    if (!axes.empty()) {
+        speedCounts[0] = axes[0].maxVelocity * speedFactor;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Aligner::moveTo: driver not available";
+        return false;
+    }
+
+    driver->setSpeeds(speedCounts);
+    return driver->moveAbsolute(counts);
+}
+
+bool Aligner::home()
+{
+    if (mController == nullptr) {
+        mLastError = "Aligner::home: no controller";
+        return false;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Aligner::home: driver not available";
+        return false;
+    }
+
+    // Homing de tous les axes dans l'ordre défini
+    for (size_t i = 0; i < homing.sequence.size(); ++i) {
+        const std::string& axisName = homing.sequence[i];
+        int axisIndex = -1;
+        for (size_t j = 0; j < axes.size(); ++j) {
+            if (axes[j].name == axisName) {
+                axisIndex = static_cast<int>(j);
+                break;
+            }
+        }
+        if (axisIndex < 0) {
+            mLastError = "Aligner::home: unknown axis '" + axisName + "'";
+            return false;
+        }
+        if (!driver->home(axisIndex)) {
+            mLastError = "Aligner::home: failed for axis " + axisName
+                         + ": " + driver->lastError();
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Aligner::stopMotion()
+{
+    if (mController == nullptr) return false;
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) return false;
+    return driver->stopAll();
+}
+
+bool Aligner::emergencyStop()
+{
+    if (mController == nullptr) return false;
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) return false;
+    driver->stopAll();
+    driver->motorOff();
+    return true;
+}
+
+bool Aligner::alignWafer(double angle, int settleMs)
+{
+    // 1. Tourner le chuck à l'angle cible
+    if (!moveTo(angle, 30.0)) {
+        return false;
+    }
+
+    // 2. Attendre la fin du mouvement
+    GalilDriver* driver = mController->getDriver();
+    if (driver != nullptr) {
+        // Attendre que le mouvement soit terminé (polling sur le port 2323)
+        // Pour l'instant, on attend juste le settle time
+    }
+
+    // 3. Temps de stabilisation (settle)
+    std::this_thread::sleep_for(std::chrono::milliseconds(settleMs));
+
+    // 4. L'alignement optique est géré par le hardware de l'aligneur
+    //    (le capteur through-beam détecte le flat/notch)
+    return true;
+}
+
+void Aligner::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<Aligner>("Aligner",
+        sol::constructors<Aligner()>(),
+        "model",         sol::readonly(&Aligner::model),
+        "manufacturer",  sol::readonly(&Aligner::manufacturer),
+        "loadFromFile",  &Aligner::loadFromFile,
+        "moveTo",        &Aligner::moveTo,
+        "home",          &Aligner::home,
+        "stopMotion",    &Aligner::stopMotion,
+        "emergencyStop", &Aligner::emergencyStop,
+        "alignWafer",    &Aligner::alignWafer,
+        "lastError",     &Aligner::lastError,
+        "dump",          &Aligner::dump
+    );
 }

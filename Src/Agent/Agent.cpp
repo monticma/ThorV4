@@ -1,4 +1,7 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
+#include <iostream>
 
 #include <nlohmann/json.hpp>
 
@@ -177,4 +180,109 @@ bool Agent::loadFromFile(const std::string& filePath)
     mLastFilePath = filePath;
     mLastError.clear();
     return true;
+}
+
+// =============================================================================
+// Cycle de vie V4
+// =============================================================================
+
+bool Agent::initialize()
+{
+    // 1. Initialiser le LuaEngine (sandbox Lua 5.4.7)
+    if (!mLuaEngine.initialize())
+    {
+        mLastError = "Agent::initialize: LuaEngine failed: " + mLuaEngine.lastError();
+        return false;
+    }
+
+    // 2. Donner l'EventBus au LuaEngine pour thor.publish()
+    mLuaEngine.setEventBus(&mEventBus);
+
+    // 3. Enregistrer les fonctions globales Lua (thor.log, thor.publish)
+    //    déjà fait dans LuaEngine::initialize()
+
+    // 4. Workcell : enregistrer les composants dans Lua
+    if (workcell)
+    {
+        if (!workcell->loadComponents(mLuaEngine.state()))
+        {
+            mLastError = "Agent::initialize: loadComponents failed: "
+                        + workcell->lastError();
+            return false;
+        }
+    }
+
+    // 5. Workcell : câbler les composants (Controller TCP + setController)
+    if (workcell)
+    {
+        if (!workcell->wireComponents(&mEventBus))
+        {
+            mLastError = "Agent::initialize: wireComponents failed: "
+                        + workcell->lastError();
+            return false;
+        }
+    }
+
+    // 6. Workcell : démarrer les listeners asynchrones (Galil port 2324)
+    if (workcell)
+    {
+        workcell->startListeners();
+    }
+
+    // 7. Charger le script Lua de démarrage (si configuré)
+    //    mLuaEngine.loadScriptFile("Config/Scripts/startup.lua");
+
+    mLastError.clear();
+    return true;
+}
+
+void Agent::run()
+{
+    // Une itération de la boucle principale.
+    // Appelé depuis la boucle while() dans ThorAgent.cpp.
+
+    // Consommer les événements de l'EventBus
+    std::vector<Event> events;
+    int consumed = mEventBus.consume(10, events);
+    if (consumed > 0)
+    {
+        processEvents(events);
+    }
+
+    // Tick périodique (télémétrie, watchdog)
+    telemetryTick();
+
+    // Pause minimale pour ne pas saturer le CPU
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+}
+
+void Agent::shutdown()
+{
+    mRunning = false;
+
+    // Arrêter les listeners et déconnecter les contrôleurs
+    if (workcell)
+    {
+        workcell->shutdown();
+    }
+
+    // LuaEngine est détruit automatiquement (pas de stop explicite)
+    mLastError.clear();
+}
+
+void Agent::processEvents(const std::vector<Event>& events)
+{
+    // Pour l'instant, on log les événements reçus.
+    // Plus tard : dispatcher vers les handlers appropriés
+    // (sécurité, télémétrie, scripts Lua...).
+    for (const auto& event : events)
+    {
+        (void)event; // éviter warning unused
+    }
+}
+
+void Agent::telemetryTick()
+{
+    // Tick périodique pour la télémétrie.
+    // Plus tard : publier les positions, états, compteurs...
 }

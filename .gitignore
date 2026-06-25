@@ -42,6 +42,10 @@ Thumbs.db
 *.sublime-*
 *.code-workspace
 
+# -------- LSP / Clangd --------
+.clangd
+compile_commands.json
+
 # -------- Temp / Misc --------
 *.log
 *.tmp

@@ -2,8 +2,10 @@
 #include <iostream>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Workcell.h"
+#include "Core/EventBus.h"
 
 #include "Agent/Components/Aligner.h"
 #include "Agent/Components/Cassette.h"
@@ -756,4 +758,149 @@ void Workcell::dump() const
     cout << "========================================\n";
     cout << "END WORKCELL DUMP\n";
     cout << "========================================\n";
+}
+
+// =============================================================================
+// Assemblage et cycle de vie (V4 — nouveau)
+// =============================================================================
+
+bool Workcell::loadComponents(sol::state& lua)
+{
+    for (auto& entry : mComponents)
+    {
+        if (!entry.instance)
+            continue;
+
+        // Chaque composant s'enregistre dans Lua (primitives + attributs)
+        entry.instance->registerInLua(lua);
+    }
+
+    mLastError.clear();
+    return true;
+}
+
+bool Workcell::wireComponents(EventBus* bus)
+{
+    mEventBus = bus;
+
+    // Passe 1 : instancier et connecter les contrôleurs
+    for (auto& entry : mComponents)
+    {
+        if (entry.type != "controller")
+            continue;
+
+        Controller* controller = dynamic_cast<Controller*>(entry.instance.get());
+        if (controller == nullptr)
+        {
+            mLastError = "Workcell::wireComponents: controller '" + entry.id
+                        + "' is not a Controller instance";
+            return false;
+        }
+
+        // Lire les canaux de connexion depuis la config WorkCell
+        std::string address = "localhost";
+        int commandPort = 2323;
+        int messagePort = 2324;
+
+        auto motionIt = entry.connection.channels.find("motion");
+        if (motionIt != entry.connection.channels.end())
+        {
+            address = motionIt->second.address;
+            commandPort = motionIt->second.port;
+        }
+
+        auto telemetryIt = entry.connection.channels.find("telemetry");
+        if (telemetryIt != entry.connection.channels.end())
+        {
+            messagePort = telemetryIt->second.port;
+        }
+
+        // Ne pas continuer si aucun canal n'est configuré
+        if (entry.connection.channels.empty())
+        {
+            mLastError = "Workcell::wireComponents: no connection channels for controller '"
+                        + entry.id + "'";
+            return false;
+        }
+
+        if (!controller->connect(address, commandPort, messagePort))
+        {
+            mLastError = "Workcell::wireComponents: failed to connect controller '"
+                        + entry.id + "': " + controller->lastError();
+            return false;
+        }
+    }
+
+    // Passe 2 : injecter les Controller* dans les composants dépendants
+    for (auto& entry : mComponents)
+    {
+        if (entry.type == "controller")
+            continue;
+
+        if (entry.controller.empty())
+            continue;
+
+        Component* ctrlComponent = findComponent(entry.controller);
+        if (ctrlComponent == nullptr)
+        {
+            mLastError = "Workcell::wireComponents: controller '" + entry.controller
+                        + "' not found for component '" + entry.id + "'";
+            return false;
+        }
+
+        Controller* controller = dynamic_cast<Controller*>(ctrlComponent);
+        if (controller == nullptr)
+        {
+            mLastError = "Workcell::wireComponents: '" + entry.controller
+                        + "' is not a Controller";
+            return false;
+        }
+
+        entry.instance->setController(controller);
+    }
+
+    mLastError.clear();
+    return true;
+}
+
+void Workcell::startListeners()
+{
+    if (mEventBus == nullptr)
+        return;
+
+    for (auto& entry : mComponents)
+    {
+        if (entry.type != "controller")
+            continue;
+
+        Controller* controller = dynamic_cast<Controller*>(entry.instance.get());
+        if (controller == nullptr)
+            continue;
+
+        GalilDriver* driver = controller->getDriver();
+        if (driver == nullptr)
+            continue;
+
+        // Le listener tourne dans un thread dédié, lit le port 2324,
+        // parse les messages asynchrones (MG, limites, erreurs) et
+        // les publie dans l'EventBus.
+        driver->startListener(mEventBus);
+    }
+}
+
+void Workcell::shutdown()
+{
+    for (auto& entry : mComponents)
+    {
+        if (entry.type != "controller")
+            continue;
+
+        Controller* controller = dynamic_cast<Controller*>(entry.instance.get());
+        if (controller == nullptr)
+            continue;
+
+        controller->disconnect();
+    }
+
+    mLastError.clear();
 }

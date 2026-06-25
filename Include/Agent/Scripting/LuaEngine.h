@@ -3,6 +3,8 @@
 #include <string>
 #include <sol/sol.hpp>
 
+class EventBus;
+
 // =============================================================================
 // LuaEngine — Moteur Lua embarqué pour ThorV4
 // =============================================================================
@@ -61,9 +63,14 @@ public:
     /// @return Chaîne vide si aucune erreur.
     std::string lastError() const;
 
+    /// @brief Injecte l'EventBus pour la fonction thor.publish().
+    /// @param bus Pointeur vers l'EventBus (non-possédant).
+    void setEventBus(EventBus* bus);
+
 private:
     sol::state  mLua;
     std::string mLastError;
+    EventBus*   mEventBus = nullptr;
 
     /// @brief Enregistre les fonctions globales accessibles aux scripts Lua.
     void registerGlobals();

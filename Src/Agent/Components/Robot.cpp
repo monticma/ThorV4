@@ -1,4 +1,7 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
+#include <cmath>
 
 #include <nlohmann/json.hpp>
 #include <sol/sol.hpp>
@@ -470,6 +473,158 @@ bool Robot::emergencyStop()
     return true;
 }
 
+bool Robot::moveRelative(int jointIndex, double delta, double speed)
+{
+    if (mController == nullptr) {
+        mLastError = "Robot::moveRelative: no controller";
+        return false;
+    }
+    if (jointIndex < 0 || jointIndex >= static_cast<int>(axes.size())) {
+        mLastError = "Robot::moveRelative: invalid joint index";
+        return false;
+    }
+
+    std::vector<double> deltas(8, 0.0);
+    deltas[jointIndex] = delta;
+
+    double speedFactor = speed / 100.0;
+    if (speedFactor < 0.01) speedFactor = 0.01;
+    if (speedFactor > 1.0)  speedFactor = 1.0;
+
+    std::vector<double> speedCounts(8, 0.0);
+    speedCounts[jointIndex] = axes[jointIndex].maxVelocity * speedFactor;
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Robot::moveRelative: driver not available";
+        return false;
+    }
+
+    driver->setSpeeds(speedCounts);
+    return driver->moveRelative(deltas);
+}
+
+bool Robot::stopMotion()
+{
+    if (mController == nullptr) return false;
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) return false;
+    return driver->stopAll();
+}
+
+bool Robot::waitMotionDone(int timeoutMs)
+{
+    if (mController == nullptr) {
+        mLastError = "Robot::waitMotionDone: no controller";
+        return false;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Robot::waitMotionDone: driver not available";
+        return false;
+    }
+
+    std::vector<double> prevPositions;
+    std::vector<double> curPositions;
+    int elapsed = 0;
+    const int pollIntervalMs = 50;
+
+    if (!driver->getPositions(prevPositions)) return false;
+
+    while (elapsed < timeoutMs) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollIntervalMs));
+        elapsed += pollIntervalMs;
+
+        if (!driver->getPositions(curPositions)) return false;
+
+        bool stable = true;
+        for (size_t i = 0; i < curPositions.size() && i < prevPositions.size(); ++i) {
+            if (std::abs(curPositions[i] - prevPositions[i]) > 1.0) {
+                stable = false;
+                break;
+            }
+        }
+        if (stable) return true;
+        prevPositions = curPositions;
+    }
+
+    mLastError = "Robot::waitMotionDone: timeout";
+    return false;
+}
+
+bool Robot::pick(int axis, int port, double distance, int settleMs)
+{
+    if (mController == nullptr) {
+        mLastError = "Robot::pick: no controller";
+        return false;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Robot::pick: driver not available";
+        return false;
+    }
+
+    // 1. Activer le vacuum via I/O (l'end effector est sur le contrôleur)
+    if (!driver->setDigitalOutput(port, true)) {
+        mLastError = "Robot::pick: failed to activate vacuum port "
+                     + std::to_string(port) + ": " + driver->lastError();
+        return false;
+    }
+
+    // 2. Temps de stabilisation du vide
+    std::this_thread::sleep_for(std::chrono::milliseconds(settleMs));
+
+    // 3. Mouvement de retrait (si distance > 0)
+    if (distance > 0.0) {
+        std::vector<double> deltas(8, 0.0);
+        deltas[axis] = -distance; // retrait = direction opposée
+        if (!driver->moveRelative(deltas)) {
+            mLastError = "Robot::pick: retract failed: " + driver->lastError();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool Robot::place(int axis, int port, double distance, int settleMs)
+{
+    if (mController == nullptr) {
+        mLastError = "Robot::place: no controller";
+        return false;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Robot::place: driver not available";
+        return false;
+    }
+
+    // 1. Mouvement d'approche (si distance > 0)
+    if (distance > 0.0) {
+        std::vector<double> deltas(8, 0.0);
+        deltas[axis] = distance;
+        if (!driver->moveRelative(deltas)) {
+            mLastError = "Robot::place: approach failed: " + driver->lastError();
+            return false;
+        }
+    }
+
+    // 2. Temps de stabilisation
+    std::this_thread::sleep_for(std::chrono::milliseconds(settleMs));
+
+    // 3. Désactiver le vacuum
+    if (!driver->setDigitalOutput(port, false)) {
+        mLastError = "Robot::place: failed to deactivate vacuum port "
+                     + std::to_string(port) + ": " + driver->lastError();
+        return false;
+    }
+
+    return true;
+}
+
 void Robot::registerInLua(sol::state& lua)
 {
     lua.new_usertype<Robot>("Robot",
@@ -479,9 +634,14 @@ void Robot::registerInLua(sol::state& lua)
         "loadFromFile",  &Robot::loadFromFile,
         "moveTo",        &Robot::moveTo,
         "moveJoint",     &Robot::moveJoint,
+        "moveRelative",  &Robot::moveRelative,
         "getPosition",   &Robot::getPosition,
         "home",          &Robot::home,
+        "stopMotion",    &Robot::stopMotion,
         "emergencyStop", &Robot::emergencyStop,
+        "waitMotionDone",&Robot::waitMotionDone,
+        "pick",          &Robot::pick,
+        "place",         &Robot::place,
         "lastError",     &Robot::lastError,
         "dump",          &Robot::dump
     );

@@ -1,4 +1,5 @@
 #include "Agent/Scripting/LuaEngine.h"
+#include "Core/EventBus.h"
 
 #include <iostream>
 #include <fstream>
@@ -8,19 +9,44 @@
 // Fonctions globales exposées aux scripts Lua
 // =============================================================================
 
+/// @brief Pointeur statique vers l'EventBus pour thorPublish.
+///        Initialisé par LuaEngine::setEventBus().
+static EventBus* gEventBusForLua = nullptr;
+
 /// @brief Fonction thorLog(level, message) accessible depuis Lua.
-///
-/// Usage Lua :
-///   thorLog("INFO", "Robot initialisé")
-///   thorLog("ERROR", "Échec du homing")
-///
-/// @param level   Niveau de log ("DEBUG", "INFO", "WARN", "ERROR").
-/// @param message Message à logger.
 static void thorLogFunction(const std::string& level, const std::string& message)
 {
-    // Pour l'instant, on loggue sur stderr. Plus tard, on pourra
-    // router vers le système de log de l'Agent.
     std::cerr << "[Thor][" << level << "] " << message << std::endl;
+}
+
+/// @brief Fonction thorPublish(eventType, message) accessible depuis Lua.
+///
+/// Publie un événement dans l'EventBus global. Usage Lua :
+///   thorPublish("MOTION_COMPLETE", "Robot finished moveTo")
+static void thorPublishFunction(const std::string& eventType,
+                                 const std::string& message)
+{
+    if (gEventBusForLua == nullptr)
+        return;
+
+    Event event;
+    event.type = EventType::ScriptStarted;
+    event.priority = EventPriority::Normal;
+    // Copier le type d'événement dans scriptName (champ 64 chars)
+    size_t nameLen = eventType.length();
+    if (nameLen > 63) nameLen = 63;
+    for (size_t i = 0; i < nameLen; ++i)
+        event.data.script.scriptName[i] = eventType[i];
+    event.data.script.scriptName[nameLen] = '\0';
+    // Copier le message
+    size_t msgLen = message.length();
+    if (msgLen > 255) msgLen = 255;
+    for (size_t i = 0; i < msgLen; ++i)
+        event.data.script.errorMessage[i] = message[i];
+    event.data.script.errorMessage[msgLen] = '\0';
+    event.data.script.lineNumber = 0;
+
+    gEventBusForLua->publish(event);
 }
 
 // =============================================================================
@@ -62,6 +88,9 @@ void LuaEngine::registerGlobals()
 {
     // Fonction de log accessible depuis les scripts
     mLua.set_function("thorLog", thorLogFunction);
+
+    // Fonction de publication d'événements (initialement sans bus)
+    mLua.set_function("thorPublish", thorPublishFunction);
 }
 
 bool LuaEngine::loadScriptFile(const std::string& filePath)
@@ -94,4 +123,10 @@ sol::state& LuaEngine::state()
 std::string LuaEngine::lastError() const
 {
     return mLastError;
+}
+
+void LuaEngine::setEventBus(EventBus* bus)
+{
+    mEventBus = bus;
+    gEventBusForLua = bus;
 }

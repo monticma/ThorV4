@@ -1,8 +1,11 @@
 #include <fstream>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/Flipper.h"
+#include "Agent/Components/Controller.h"
+#include "Agent/Drivers/GalilDriver.h"
 
 using json = nlohmann::json;
 
@@ -153,4 +156,94 @@ void Flipper::dump() const
     dumpIoPins(ioPinsRequired);
 
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives
+// =============================================================================
+
+void Flipper::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+bool Flipper::flip(double speed)
+{
+    if (mController == nullptr) {
+        mLastError = "Flipper::flip: no controller";
+        return false;
+    }
+
+    // Le flipper a 1 axe rotatif — rotation de 180° pour inverser le wafer
+    std::vector<double> counts(8, 0.0);
+    counts[0] = 180.0; // 180 degrés
+
+    double speedFactor = speed / 100.0;
+    if (speedFactor < 0.01) speedFactor = 0.01;
+    if (speedFactor > 1.0)  speedFactor = 1.0;
+
+    std::vector<double> speedCounts(8, 0.0);
+    if (!axes.empty()) {
+        speedCounts[0] = axes[0].maxVelocity * speedFactor;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Flipper::flip: driver not available";
+        return false;
+    }
+
+    driver->setSpeeds(speedCounts);
+    return driver->moveAbsolute(counts);
+}
+
+bool Flipper::home()
+{
+    if (mController == nullptr) {
+        mLastError = "Flipper::home: no controller";
+        return false;
+    }
+
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) {
+        mLastError = "Flipper::home: driver not available";
+        return false;
+    }
+
+    // Homing sur l'axe unique du flipper
+    return driver->home(0);
+}
+
+bool Flipper::stopMotion()
+{
+    if (mController == nullptr) return false;
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) return false;
+    return driver->stopAll();
+}
+
+bool Flipper::emergencyStop()
+{
+    if (mController == nullptr) return false;
+    GalilDriver* driver = mController->getDriver();
+    if (driver == nullptr) return false;
+    driver->stopAll();
+    driver->motorOff();
+    return true;
+}
+
+void Flipper::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<Flipper>("Flipper",
+        sol::constructors<Flipper()>(),
+        "model",         sol::readonly(&Flipper::model),
+        "manufacturer",  sol::readonly(&Flipper::manufacturer),
+        "loadFromFile",  &Flipper::loadFromFile,
+        "flip",          &Flipper::flip,
+        "home",          &Flipper::home,
+        "stopMotion",    &Flipper::stopMotion,
+        "emergencyStop", &Flipper::emergencyStop,
+        "lastError",     &Flipper::lastError,
+        "dump",          &Flipper::dump
+    );
 }

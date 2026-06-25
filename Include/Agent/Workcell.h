@@ -9,6 +9,12 @@
 
 #include "Components/Component.h"
 
+class EventBus;
+namespace sol
+{
+    class state;
+}
+
 // -----------------------------------------------------------------------------
 // Workcell : cellule de travail, contient tous les composants et le workflow
 // Lecture du .json dans Config/WorkCells/
@@ -322,6 +328,25 @@ public:
     /// sur la sortie standard, pour vérifier la conformité avec les fichiers JSON.
     void dump() const;
 
+    // --- Nouveau : assemblage et cycle de vie (V4) ---
+
+    /// @brief Enregistre tous les composants dans la VM Lua.
+    /// @param lua VM Lua (sol::state) dans laquelle enregistrer les types.
+    /// @return true si toutes les inscriptions ont réussi.
+    bool loadComponents(sol::state& lua);
+
+    /// @brief Câble les composants entre eux : injecte les Controller*
+    /// dans les Robot/Track/Aligner, et connecte les contrôleurs en TCP.
+    /// @param bus EventBus utilisé pour les listeners asynchrones.
+    /// @return true si le câblage a réussi.
+    bool wireComponents(EventBus* bus);
+
+    /// @brief Démarre les listeners asynchrones (GalilDriver port 2324).
+    void startListeners();
+
+    /// @brief Arrête tous les composants et déconnecte les contrôleurs.
+    void shutdown();
+
     // --- Champs racine ---
     std::string version;
     std::string fileType;
@@ -338,4 +363,5 @@ public:
 private:
     std::vector<WorkcellComponentEntry> mComponents;
     std::string mLastError;
+    EventBus* mEventBus = nullptr;   // stocké pour startListeners()
 };

@@ -6,6 +6,8 @@
 #include <memory>
 
 #include "Workcell.h"
+#include "Core/EventBus.h"
+#include "Agent/Scripting/LuaEngine.h"
 
 // -----------------------------------------------------------------------------
 // AgentConfig : lecture du fichier Config/Agent.json
@@ -114,6 +116,34 @@ public:
     /// @brief Retourne un pointeur vers la WorkCell chargée.
     Workcell* getWorkcell() const { return workcell.get(); }
 
+    /// @brief Retourne une référence vers l'EventBus.
+    EventBus* getEventBus() { return &mEventBus; }
+
+    /// @brief Retourne une référence vers le LuaEngine.
+    LuaEngine* getLuaEngine() { return &mLuaEngine; }
+
+    // --- Cycle de vie V4 ---
+
+    /// @brief Initialise tous les sous-systèmes : EventBus, LuaEngine,
+    ///        Workcell (loadComponents + wireComponents + startListeners).
+    /// @return true si l'initialisation complète a réussi.
+    bool initialize();
+
+    /// @brief Boucle principale : consomme les événements et exécute
+    ///        les ticks périodiques (télémétrie, watchdog).
+    void run();
+
+    /// @brief Arrêt gracieux : déconnecte les contrôleurs, arrête les
+    ///        listeners, détruit la VM Lua.
+    void shutdown();
+
+private:
+    /// @brief Traite les événements consommés depuis l'EventBus.
+    void processEvents(const std::vector<Event>& events);
+
+    /// @brief Tick périodique de télémétrie (~10 Hz).
+    void telemetryTick();
+
 public:
     // --- Champs racine ---
     std::string version;
@@ -143,7 +173,10 @@ public:
 
 private:
     std::unique_ptr<Workcell> workcell;
+    EventBus  mEventBus;
+    LuaEngine mLuaEngine;
 
     std::string mLastError;
     std::string mLastFilePath;
+    bool mRunning = false;
 };

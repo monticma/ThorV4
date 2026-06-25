@@ -1,6 +1,7 @@
 #include <fstream>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/CycleCounter.h"
 
@@ -80,4 +81,37 @@ void CycleCounter::dump() const
     dumpIoPins(ioPinsRequired);
 
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives (composant service — pas de contrôleur)
+// =============================================================================
+
+int CycleCounter::getCycleCount() const
+{
+    return mCycleCount;
+}
+
+int CycleCounter::getErrorCount() const
+{
+    return mErrorCount;
+}
+
+void CycleCounter::resetCounts()
+{
+    mCycleCount = 0;
+    mErrorCount = 0;
+}
+
+void CycleCounter::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<CycleCounter>("CycleCounter",
+        sol::constructors<CycleCounter()>(),
+        "loadFromFile",  &CycleCounter::loadFromFile,
+        "getCycleCount", &CycleCounter::getCycleCount,
+        "getErrorCount", &CycleCounter::getErrorCount,
+        "resetCounts",   &CycleCounter::resetCounts,
+        "lastError",     &CycleCounter::lastError,
+        "dump",          &CycleCounter::dump
+    );
 }
