@@ -1,0 +1,724 @@
+Configuration chargée avec succès!
+
+========================================
+WORKCELL DUMP
+========================================
+[Root]
+  version : 3.0
+  fileType : workcell
+  cellId : CELL-ATM100-001
+  cellType : wafer_handling
+  description : ATM-100 Wafer handling cell with pre-aligner and linear track
+[Units]
+  length : mm
+  angle : deg
+  linearVelocity : mm/s
+  angularVelocity : deg/s
+  linearAcceleration : mm/s2
+  angularAcceleration : deg/s2
+  time : ms
+  pressure : kPa
+  speed : %
+  description : Default units. 'speed' fields are percentage of component max velocity.
+[Workflow]
+  defaultSequence : scan_then_process_all
+  processingOrder : bottom_to_top
+  scanBeforeEachCassette : true
+  alignBeforeProcess : true
+  returnAfterProcess : true
+  returnToSameSlot : true
+  pauseOnCassetteExhausted : true
+  autoResumeOnNewCassette : true
+  operatorInterface:
+    resumeButtonPin : 24
+    resumeButtonController : galil1
+    description : Physical resume button — allows operator to resume after cassette swap
+  speeds:
+    transit : 100
+    approach : 30
+    insertCassette : 15
+    scan : 10
+    description : Percentage of max velocity per workflow phase
+  retract:
+    defaultStrategy : retractRadial
+    defaultClearance : 15
+    retractBeforeRotation : true
+    description : Always retract arm before theta rotation for safety
+  timings:
+    vacuumSettle : 200
+    placeDwell : 100
+    pickDwell : 100
+    cassetteSwapTimeout : 120000
+    description : All values in ms (see top-level units)
+[Workspace]
+  cellBoundary:
+    min: x=-250 y=-150 z=0
+    max: x=250 y=250 z=200
+    description : Physical cell boundary — robot must not exceed these limits
+  exclusionZones (2) :
+    - name=aligner_body type=cylinder center=(0,180,25) radius=35 height=50 (Pre-aligner body — avoid collision)
+    - name=cassette1_body type=box min=(175,-110,0) max=(230,-50,170) (Cassette 1 volume — approach from front only)
+[Metadata]
+  configVersion : 3.0
+  created : 2026-06-20
+  modified : 2026-06-20
+  notes : [WorkCell v3.0 — standardized axes[], ioPins[], units enforcement, All components use Config/Components/* standardized templates, ioPins uses structured format: id, pin, direction/signalType from template, teachPoints coordinates stored in agent DB, referenced by dbKey, axisMapping[].axis references axes[].name (not joints[].name), Controller connection and axisMapping are in the controller component entry, No separate root 'controller' or 'endEffector' sections — everything in components[]]
+========================================
+[Components] (9 entries)
+========================================
+----------------------------------------
+Component #0 : galil1
+----------------------------------------
+  id : galil1
+  type : controller
+  config : Config/Components/Controllers/Galil_DMC8240.json
+  controller : 
+  enabled : true
+  description : Galil DMC-8240 motion controller — 8 axes, Ethernet
+  attachedTo : 
+  mutuallyExclusiveWith : 
+  connection:
+    protocol : tcp
+    timeout : 5000
+    channels (2) :
+      - motion address=localhost port=2323
+      - telemetry address=localhost port=2323
+  axisMapping (8) :
+    - controllerAxis=A component=robot axis=Theta role=rotation countsPerUnit=1000 (Robot base rotation)
+    - controllerAxis=B component=robot axis=Elbow role=extension countsPerUnit=1000 (Robot frog-leg articulation)
+    - controllerAxis=C component=robot axis=Z role=vertical countsPerUnit=1000 (Robot vertical translation)
+    - controllerAxis=D component=track axis=Linear role=translation countsPerUnit=1000 (Linear track translation)
+    - controllerAxis=E component=aligner axis=Rotation role=rotation countsPerUnit=1000 (Pre-aligner chuck rotation)
+    - controllerAxis=F component=aligner axis=Radial role=centering countsPerUnit=1000 (Pre-aligner radial centering)
+    - controllerAxis=G component=aligner axis=PinLift role=vertical countsPerUnit=1000 (Pre-aligner pin lift)
+    - controllerAxis=H component=flipper axis=Rotation role=rotation countsPerUnit=1000 (Flipper)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : controller
+  [Controller]
+  model : DMC-8240
+  manufacturer : Galil Motion Control
+  family : DMC-82x0
+  description : 8-axis Ethernet motion controller with coordinated motion and I/O
+    units:
+      length : mm
+      angle : deg
+      linearVelocity : mm/s
+      angularVelocity : deg/s
+      linearAcceleration : mm/s2
+      angularAcceleration : deg/s2
+      time : ms
+    capabilities:
+      maxAxes : 8
+      axisLabels : [A, B, C, D, E, F, G, H]
+      coordinatedMotion : true
+      linearInterpolation : true
+      circularInterpolation : true
+      electronicGearing : true
+      encoderFeedback : true
+      encoderResolution: min=1 max=16777216 unit=counts/rev
+      pidControl : true
+      motionProfiles : [trapezoidal, s-curve]
+      digitalInputs : 80
+      digitalOutputs : 80
+      analogInputs : 8
+      analogOutputs : 8
+      programMemory : 1000
+      firmwareLanguage : Galil DMC
+    connection:
+      supportedProtocols : [tcp, serial]
+      tcp: defaultPort=2323 commandPort=2323 messagePort=2324 (Dual TCP connection — command (synchronous) + message (asynchronous))
+      serial: defaultBaud=115200 dataBits=8 parity=none stopBits=1
+    driver:
+      identifier : galil_dmc8240
+      library : Build/Plugins/libThorGalil_8240.so
+      driverConfig : Config/Plugins/driver_galil8240.json
+      description : Thor driver plugin for Galil DMC-8240
+    limits:
+      maxVelocity : 3e+06
+      maxAcceleration : 1.07374e+09
+      velocityUnit : counts/s
+      accelerationUnit : counts/s2
+      description : Absolute controller limits in encoder counts — actual limits depend on motor and mechanism
+    ioCapabilities:
+      digitalInputs : 80
+      digitalOutputs : 80
+      analogInputs : 8
+      analogOutputs : 8
+      digitalVoltage : 24VDC
+      analogVoltage : ±10V
+      maxCurrentPerOutput : 500
+      currentUnit : mA
+      description : I/O electrical specifications for pin validation
+    metadata:
+      datasheet : https://www.galil.com/motion-controllers/multi-axis/dmc-82x0
+      notes : [Supports 1-8 axes in increments of 2 (8210, 8220, 8240, 8260, 8280), DMC-8240 = 4 axes standard, expandable to 8 with add-on modules, Ethernet 10/100BaseT, optionally RS-232, Can run stored programs autonomously (DR, MG, WT, etc.)]
+----------------------------------------
+Component #1 : robot
+----------------------------------------
+  id : robot
+  type : robot
+  config : Config/Components/Robots/ATM100V2.json
+  controller : galil1
+    controllerAxes : [A, B, C]
+  enabled : true
+  description : ATM-100 Atmospheric Frog-leg SCARA — 3 DOF (Theta, Elbow, Z)
+  attachedTo : 
+  mutuallyExclusiveWith : 
+  teachPoints (19) :
+        - alignerApproach dbKey=alignerApproach frame=joint required=true (Safe approach above aligner)
+        - alignerPick dbKey=alignerPick frame=joint required=true (Wafer pick-up after alignment)
+        - alignerPlace dbKey=alignerPlace frame=joint required=true (Wafer placement on aligner chuck)
+        - alignerRetract dbKey=alignerRetract frame=joint required=true (Safe retract before alignment cycle)
+        - cassette1Approach dbKey=cassette1Approach frame=joint required=true (Safe approach in front of cassette)
+        - cassette1InsertDepth dbKey=cassette1InsertDepth frame=joint required=true (Full insertion depth inside cassette)
+        - cassette1Retract dbKey=cassette1Retract frame=joint required=true (Safe retract after cassette operation)
+        - cassette1ScanStart dbKey=cassette1ScanStart frame=joint required=true (Start position for mapping scan)
+        - cassette1Slot1 dbKey=cassette1Slot1 frame=joint required=true (Slot 1 reference — other slots computed from pitch)
+        - cassette2Approach dbKey=cassette2Approach frame=joint required=true (Safe approach to cassette 2)
+        - cassette2InsertDepth dbKey=cassette2InsertDepth frame=joint required=true (Full insert depth for cassette 2)
+        - cassette2Retract dbKey=cassette2Retract frame=joint required=true (Safe retract from cassette 2)
+        - cassette2ScanStart dbKey=cassette2ScanStart frame=joint required=true (Scan start for cassette 2)
+        - cassette2Slot1 dbKey=cassette2Slot1 frame=joint required=true (Slot 1 reference for cassette 2)
+        - home dbKey=home frame=joint required=true (Robot home — arm fully retracted, safe Z)
+        - processApproach dbKey=processApproach frame=joint required=true (Safe approach above process chamber)
+        - processPick dbKey=processPick frame=joint required=true (Wafer pick-up after processing)
+        - processPlace dbKey=processPlace frame=joint required=true (Wafer placement in process chamber)
+        - processRetract dbKey=processRetract frame=joint required=true (Safe retract from process chamber)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : robot
+  [Robot]
+  model : ATM-100
+  manufacturer : Equipe Technologies (PRI Automation)
+  description : Atmospheric Top Mount Series 100 — 3 DOF frog-leg SCARA, 8.5in reach, 7in Z-travel
+    units:
+      length : mm
+      angle : deg
+      linearVelocity : mm/s
+      angularVelocity : deg/s
+      linearAcceleration : mm/s2
+      angularAcceleration : deg/s2
+    kinematics:
+      type : custom
+      coordinateSystem : cylindrical
+      visualizerType : frogleg
+      pluginLibrary : Build/Plugins/Kinematics/ATM/libThorKinematicsATM.so
+      pluginConfig : Config/Plugins/kinematics_atm100.json
+      workspace: minReach=0 maxReach=214 minZ=0 maxZ=177.8
+      dhParameters (3) :
+        - a=107.95 alpha=0 d=0 dVar= theta=q0 type=revolute (Frame 1: Theta — Base rotation (4.25 in link))
+        - a=107.95 alpha=0 d=0 dVar= theta=q1 type=revolute (Frame 2: Elbow — Frog-leg articulation (4.25 in link))
+        - a=0 alpha=0 d=0 dVar=q2 theta=0.000000 type=prismatic (Frame 3: Z — Vertical translation)
+    axes (3) :
+      - Theta type=revolute role=rotation travel=[-180..180] maxV=360 maxA=1800 home=0 (Base rotation)
+      - Elbow type=revolute role=extension travel=[-170..170] maxV=360 maxA=1800 home=-100 (Frog-leg articulation)
+      - Z type=prismatic role=vertical travel=[0..177.8] maxV=50 maxA=200 home=0 up=177.8 down=0 (Vertical translation)
+    homing: method=limit_switch dir=negative velocity=10 seq=[Theta, Elbow, Z] (Home Theta and Elbow first, Z last)
+    capabilities:
+      primitives : [moveTo, moveJoint, getPosition, getStatus, home, emergencyStop]
+      features : [cylindrical_kinematics, frogleg_articulation, atmospheric_handling]
+  visual : Config/Visuals/FrogLeg.visual.json
+    physical:
+      reach : 215.9
+      zTravel : 177.8
+      weight : 8.5
+      weightUnit : kg
+      mountType : top_mount
+      environment : atmospheric
+      description : 8.5 in reach, 7 in Z-travel, top-mounted atmospheric
+    ioPins (2) :
+      - id=vacuumOutput dir=output signal=digital count=1 voltage= debounce=0ms (Vacuum ejector control)
+      - id=vacuumSensor dir=input signal=digital count=1 voltage= debounce=0ms (Vacuum pressure switch sense)
+    metadata.variants (2) :
+      - model=ATM-100 reach=215.9 zTravel=177.8 (Standard 8.5in reach, 7in Z)
+      - model=ATM-200 reach=330.2 zTravel=177.8 (Extended 13in reach, 7in Z)
+    metadata.notes : [Frog-leg mechanism: both joints rotate in same direction = radial extension, Counter-rotation = theta rotation with constant extension, DH link lengths: 107.95mm (4.25 in) each]
+----------------------------------------
+Component #2 : track
+----------------------------------------
+  id : track
+  type : linear_track
+  config : Config/Components/Tracks/Track_600mm.json
+  controller : galil1
+    controllerAxes : [D]
+  enabled : true
+  description : 
+  attachedTo : 
+  mutuallyExclusiveWith : 
+  teachPoints (4) :
+        - alignerStation dbKey=track.alignerStation frame=joint required=true (Track position to reach pre-aligner)
+        - cassette1Station dbKey=track.cassette1Station frame=joint required=true (Track position to reach cassette 1)
+        - home dbKey=track.home frame=joint required=true (Track home (zero position))
+        - processStation dbKey=track.processStation frame=joint required=true (Track position to reach process zone)
+    overrides : {}
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : track
+  [Track]
+  model : Track-600
+  manufacturer : Equipe Technologies
+  description : 600mm linear track — extends robot reach to multiple stations along rail
+    units:
+      length : mm
+      linearVelocity : mm/s
+      linearAcceleration : mm/s2
+  axisCount : 1
+    axes (1) :
+      - Linear type=prismatic role=translation travel=[0..600] maxV=100 maxA=500 home=0 (Linear translation along rail)
+    homing: method=limit_switch dir=negative velocity=10 seq=[Linear] (Home to negative limit switch)
+  visual : Config/Visuals/Track.visual.json
+    mechanical:
+      guideType : linear_ball_bearing
+      driveType : ball_screw
+      pitch : 5
+      description : Ball screw drive, linear bearing guides
+    physical:
+      length : 750
+      width : 120
+      height : 85
+      weight : 12
+      weightUnit : kg
+      mountingPattern : 4-bolt_M8
+      description : Overall dimensions including end brackets
+    ioPins (3) :
+      - id=negativeLimit dir=input signal=digital count=1 voltage= debounce=0ms (Negative limit switch)
+      - id=positiveLimit dir=input signal=digital count=1 voltage= debounce=0ms (Positive limit switch)
+      - id=homeSwitch dir=input signal=digital count=1 voltage= debounce=0ms (Home reference switch)
+    metadata.variants (3) :
+      - model=Track-300 travel=300 (Short track — 2 stations)
+      - model=Track-600 travel=600 (Standard track — 3-4 stations)
+      - model=Track-1000 travel=1000 (Long track — 5+ stations)
+    metadata.notes : [Track and flipper are mutually exclusive on the same controller axis, Payload capacity depends on robot weight — check mechanical specs]
+----------------------------------------
+Component #3 : aligner
+----------------------------------------
+  id : aligner
+  type : pre_aligner
+  config : Config/Components/Aligners/PRE-200.json
+  controller : galil1
+    controllerAxes : [E, F, G]
+  enabled : true
+  description : 
+  attachedTo : 
+  mutuallyExclusiveWith : 
+    overrides : {"alignment":{"defaultWaferSize":200,"settleTime":300,"timeout":15000}}
+  ioPins (6) :
+        - id=startAlign pin=3 (Start alignment trigger)
+        - id=alignDone pin=4 (Alignment complete signal)
+        - id=alignError pin=5 (Alignment error signal)
+        - id=chuckVacuum pin=10 (Chuck vacuum solenoid)
+        - id=chuckVacuumSense pin=11 (Chuck vacuum pressure switch)
+        - id=pinLift pin=12 (Pin lift solenoid)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy=retractRadial clearance=15 (Robot retracts radially after placing, before alignment)
+  errorHandling: retryCount=2 retryDelay=1000 onFailure=abort_and_retract retractOnError=true notifyTowerLight=true logLevel=error (On error: retry, then abort + retract + signal tower)
+  speeds: approach=30 place=15 pick=15 (Percentage of max velocity per phase)
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : aligner
+  [Aligner]
+  model : PRE-200
+  manufacturer : Equipe Technologies
+  description : 3-axis atmospheric pre-aligner — chuck loading, horseshoe end-effector compatible
+  axisCount : 3
+  loadType : chuck
+    units:
+      length : mm
+      angle : deg
+      linearVelocity : mm/s
+      angularVelocity : deg/s
+      linearAcceleration : mm/s2
+      angularAcceleration : deg/s2
+      time : ms
+    axes (3) :
+      - Rotation type=revolute role=rotation travel=[0..360] continuous maxV=360 maxA=720 home=0 (Chuck rotation for notch/flat edge detection)
+      - Radial type=prismatic role=centering travel=[-5..5] maxV=20 maxA=100 home=0 (Lateral centering — shifts wafer to center after CCD analysis)
+      - PinLift type=prismatic role=vertical travel=[0..15] maxV=10 maxA=50 home=0 up=12 down=0 (Vertical pin lift — raises/lowers wafer for robot handoff)
+    homing: method=limit_switch dir=negative velocity=10 seq=[PinLift, Radial, Rotation] (Home pin lift down, radial center, then rotation zero)
+    alignment:
+      modes : [notch, flat]
+      autoDetect : true
+      waferSizes : [76, 100, 125, 150, 200]
+      defaultWaferSize : 200
+      sensorType : CCD_linear_array
+      lightSource : LED_array
+      settleTime : 300
+      maxAlignmentTime : 15000
+      repeatability : 0.05
+      repeatabilityUnit : mm
+      description : CCD edge detection — auto-detects notch or flat orientation
+  visual : Config/Visuals/Aligner.visual.json
+    pinAssembly:
+      pinCount : 3
+      pinType : short
+      vacuumAssisted : true
+      description : 3 vacuum pins around chuck — short pins for horseshoe EE compatibility
+  compatibleEndEffectors : [horseshoe, blade]
+    physical:
+      chuckDiameter : 180
+      bodyDiameter : 120
+      height : 95
+      weight : 4.5
+      weightUnit : kg
+      mountingPattern : 4-bolt_M6
+      description : Mechanical envelope for collision avoidance planning
+    ioPins (6) :
+      - id=startAlign dir=output signal=digital count=1 voltage= debounce=0ms (Start alignment trigger)
+      - id=alignDone dir=input signal=digital count=1 voltage= debounce=0ms (Alignment complete signal)
+      - id=alignError dir=input signal=digital count=1 voltage= debounce=0ms (Alignment error signal)
+      - id=chuckVacuum dir=output signal=digital count=1 voltage= debounce=0ms (Chuck vacuum solenoid)
+      - id=chuckVacuumSense dir=input signal=digital count=1 voltage= debounce=0ms (Chuck vacuum pressure switch)
+      - id=pinLift dir=output signal=digital count=1 voltage= debounce=0ms (Pin lift solenoid)
+    metadata.variants (6) :
+      - model=PRE-050 axisCount=1 loadType=chuck waferSizes=[76, 100, 125, 150, 200] (Single-axis, no pins, lower cost)
+      - model=PRE-200 axisCount=3 loadType=chuck waferSizes=[76, 100, 125, 150, 200] (3-axis, chuck loading, horseshoe EE)
+      - model=PRE-201 axisCount=3 loadType=pin waferSizes=[76, 100, 125, 150, 200] (3-axis, pin loading, blade EE)
+      - model=PRE-300 axisCount=3 loadType=chuck waferSizes=[150, 200, 300] (3-axis, chuck loading, 300mm capable)
+      - model=PRE-301 axisCount=3 loadType=pin waferSizes=[150, 200, 300] (3-axis, pin loading, 300mm capable)
+      - model=PRE-350 axisCount=1 loadType=chuck waferSizes=[150, 200, 300] (Single-axis, no pins, 300mm capable)
+    metadata.notes : [3-axis aligners have independent operation — robot can move while aligning, 1-axis aligners require robot to provide R and Z movement during alignment, PRE-300/301 load type is software-configurable via SWL command]
+----------------------------------------
+Component #4 : cassette1
+----------------------------------------
+  id : cassette1
+  type : cassette
+  config : Config/Components/Cassettes/FOUP25_200mm.json
+  controller : galil1
+  enabled : true
+  description : 
+  attachedTo : 
+  mutuallyExclusiveWith : 
+    params : {"stationLetter":"A"}
+  ioPins (2) :
+        - id=cassettePresence pin=20 (Cassette present sensor)
+        - id=doorInterlock pin=21 (FOUP door interlock status)
+  position: x=0 y=0 z=0 theta=0 (Base slot 1 position — override with taught values)
+  approach: offset=(-25,0,0) speed=30 (Offset from slot position for safe approach)
+  retract: strategy=retractRadial clearance=15 (After pick/place, retract arm radially)
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction=top_to_bottom slots=[25..1] scanSpeed=10 scanZ=[162..3.175] filterThreshold=0.5 (Laser scan — Z positions auto-computed from geometry)
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : cassette
+  [Cassette]
+  model : FOUP-25-200
+  standard : SEMI E47.1
+  description : 25-slot Front Opening Unified Pod for 200mm wafers — SEMI standard geometry
+    units:
+      length : mm
+      time : ms
+    geometry:
+      slotCount : 25
+      pitch : 6.35
+      offset : 3.175
+      stroke : 5
+      slotHeight : 0.8
+      waferDiameter : 200
+      waferThickness : 0.725
+      description : pitch = center-to-center between slots, offset = Z from cassette base to slot 1 center, stroke = Z lift to clear shelf, slotHeight = shelf thickness
+    physical:
+      width : 240
+      depth : 240
+      height : 175
+      openingWidth : 210
+      openingHeight : 165
+      weight : 1.5
+      weightUnit : kg
+      description : External dimensions and front opening size
+    waferSpecs:
+      diameter : 200
+      thickness: min=0.3 max=1.2
+      material : [silicon, glass, sapphire]
+      description : Compatible wafer specifications
+    ioPins (2) :
+      - id=cassettePresence dir=input signal=digital count=1 voltage= debounce=0ms (Cassette present sensor)
+      - id=doorInterlock dir=input signal=digital count=1 voltage= debounce=0ms (FOUP door interlock status)
+    metadata.variants (4) :
+      - model=FOUP-25-150 waferDiameter=150 pitch=6.35 slotCount=25 standard=SEMI E47.1 (25-slot 150mm)
+      - model=FOUP-25-200 waferDiameter=200 pitch=6.35 slotCount=25 standard=SEMI E47.1 (25-slot 200mm)
+      - model=FOUP-25-300 waferDiameter=300 pitch=10 slotCount=25 standard=SEMI E47.1 (25-slot 300mm)
+      - model=FOUP-13-300 waferDiameter=300 pitch=10 slotCount=13 standard=SEMI E47.1 (13-slot 300mm)
+    metadata.notes : [SEMI E47.1 defines mechanical interface for 200mm FOUPs, SEMI E1.9 defines 300mm FOUP geometry (10mm pitch), Offset is typically pitch/2 for bottom slot centering]
+----------------------------------------
+Component #5 : processZone1
+----------------------------------------
+  id : processZone1
+  type : process_zone
+  config : Config/Components/ProcessZones/GenericChamber.json
+  controller : galil1
+  enabled : true
+  description : 
+  attachedTo : 
+  mutuallyExclusiveWith : 
+    overrides : {"timeout":300000}
+    params : {"name":"Process Chamber 1"}
+  ioPins (5) :
+        - id=ready pin=6 (Chamber ready signal)
+        - id=startProcess pin=7 (Start process trigger)
+        - id=processing pin=8 (Process in progress)
+        - id=done pin=9 (Process complete)
+        - id=error pin=14 (Process error signal)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy=retractRadial clearance=20 (Retract arm radially after placing/picking wafer)
+  errorHandling: retryCount=0 retryDelay=0 onFailure=abort_and_retract retractOnError=true notifyTowerLight=true logLevel= (On process error: abort, retract, signal tower)
+  speeds: approach=30 place=10 pick=10 (Percentage of max velocity)
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : process_zone
+  [ProcessZone]
+  model : Generic Chamber
+  manufacturer : Generic
+  description : Standard process chamber with 5-wire handshake I/O protocol
+    protocol:
+      type : digital_handshake
+      description : 5-wire I/O handshake: ready (in), startProcess (out), processing (in), done (in), error (in)
+      signals (5) :
+        - done dir=input (Process complete)
+        - error dir=input (Process error)
+        - processing dir=input (Process in progress)
+        - ready dir=input (Chamber ready to accept wafer)
+        - startProcess dir=output (Assert to start process cycle)
+    defaults:
+      timeout : 30000
+      description : Default process timeout in milliseconds
+    physical:
+      chamberType : atmospheric
+      waferSizes : [150, 200, 300]
+      description : Compatible wafer sizes (mm)
+    ioPins (5) :
+      - id=ready dir=input signal=digital count=1 voltage= debounce=0ms (Chamber ready signal)
+      - id=startProcess dir=output signal=digital count=1 voltage= debounce=0ms (Start process trigger)
+      - id=processing dir=input signal=digital count=1 voltage= debounce=0ms (Process in progress)
+      - id=done dir=input signal=digital count=1 voltage= debounce=0ms (Process complete)
+      - id=error dir=input signal=digital count=1 voltage= debounce=0ms (Process error signal)
+    metadata.variants (4) :
+      - model=Generic Chamber chamberType=atmospheric (Atmospheric process chamber)
+      - model=CVD Chamber chamberType=vacuum (Chemical Vapor Deposition)
+      - model=Etch Chamber chamberType=vacuum (Plasma etch chamber)
+      - model=Anneal Chamber chamberType=atmospheric (Thermal anneal chamber)
+    metadata.notes : [All chambers use the same 5-wire handshake protocol, Timeout should be adjusted per process type (CVD: 300s, Etch: 120s, Anneal: 600s)]
+----------------------------------------
+Component #6 : towerLight
+----------------------------------------
+  id : towerLight
+  type : signal_tower
+  config : Config/Components/SignalTowers/PATLITE-LR6-3.json
+  controller : galil1
+  enabled : true
+  description : 
+  attachedTo : 
+  mutuallyExclusiveWith : 
+  ioPins (4) :
+        - id=greenLight pin=16 (Green lamp control)
+        - id=yellowLight pin=17 (Yellow lamp control)
+        - id=redLight pin=18 (Red lamp control)
+        - id=buzzer pin=19 (Buzzer control)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : signal_tower
+  [SignalTower]
+  model : PATLITE-LR6-3
+  manufacturer : PATLITE
+  description : 3-color signal tower with buzzer — standard semiconductor equipment indicator
+    lights:
+      count : 3
+      colors : [green, yellow, red]
+      modes : [off, on, blink]
+      description : 3-tier stack light: green (running), yellow (warning), red (error/alarm)
+    buzzer:
+      available : true
+      modes : [off, continuous, double_beep, intermittent]
+      description : Piezo buzzer with multiple alert patterns
+    defaults:
+      blinkRateHz : 2
+      buzzerFrequencyHz : 2800
+      initialPattern : off
+    patterns (7) :
+      - aligning green=blink yellow=off red=off blue=off white=off buzzer=off
+      - cassette_exhausted green=off yellow=blink red=off blue=off white=off buzzer=double_beep
+      - emergency_stop green=off yellow=off red=blink blue=off white=off buzzer=continuous
+      - error green=off yellow=off red=on blue=off white=off buzzer=continuous
+      - idle green=off yellow=off red=off blue=off white=off buzzer=off
+      - processing green=on yellow=on red=off blue=off white=off buzzer=off
+      - running green=on yellow=off red=off blue=off white=off buzzer=off
+    reactions (7) :
+      - EMERGENCY_STOP -> emergency_stop
+      - MOTION_COMPLETE -> idle
+      - MOTION_FAILED -> error
+      - RESET_ERROR -> idle
+      - STATE_ERROR -> error
+      - STATE_EXECUTING -> running
+      - STATE_IDLE -> idle
+    physical:
+      height : 295
+      diameter : 60
+      weight : 0.45
+      weightUnit : kg
+      voltage : 24VDC
+      mountingType : M12_threaded_base
+      protectionRating : IP65
+      description : Standard PATLITE LR6 form factor
+    ioPins (4) :
+      - id=greenLight dir=output signal=digital count=1 voltage= debounce=0ms (Green lamp control)
+      - id=yellowLight dir=output signal=digital count=1 voltage= debounce=0ms (Yellow lamp control)
+      - id=redLight dir=output signal=digital count=1 voltage= debounce=0ms (Red lamp control)
+      - id=buzzer dir=output signal=digital count=1 voltage= debounce=0ms (Buzzer control)
+    metadata.variants (3) :
+      - model=PATLITE-LR6-3 lightCount=3 colors=[green, yellow, red] (3-color standard)
+      - model=PATLITE-LR6-5 lightCount=5 colors=[green, yellow, red, blue, white] (5-color extended)
+      - model=PATLITE-LR4-3 lightCount=3 colors=[green, yellow, red] (3-color compact (40mm))
+    metadata.notes : [SEMI E10 defines standard signal tower color meanings for semiconductor equipment, Green = running/auto, Yellow = warning/manual, Red = error/alarm, Blue (optional) = material request, White (optional) = equipment specific]
+----------------------------------------
+Component #7 : cycleCounter
+----------------------------------------
+  id : cycleCounter
+  type : cycle_counter
+  config : Config/Components/CycleCounters/CycleCounter_Default.json
+  controller : 
+  enabled : true
+  description : Service component — counts motion cycles and errors via EventBus
+  attachedTo : 
+  mutuallyExclusiveWith : 
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(0,0,0)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : cycle_counter
+  [CycleCounter]
+  description : Cycle counter service component — counts motion cycles and errors via EventBus
+    params.reactions (2) :
+      - MOTION_COMPLETE -> increment
+      - STATE_ERROR -> markError
+    metadata.notes : [Service component — no controller, no axes, no I/O, Reacts to MOTION_COMPLETE events to count cycles, Reacts to STATE_ERROR events to count errors, Commands: getCount, reset, getStats (via executeCommand or Lua)]
+----------------------------------------
+Component #8 : endEffector1
+----------------------------------------
+  id : endEffector1
+  type : end_effector
+  config : Config/Components/EndEffectors/EE_Horseshoe_200mm.json
+  controller : galil1
+  enabled : true
+  description : Horseshoe vacuum end-effector with through-beam scanner
+  attachedTo : robot
+  mutuallyExclusiveWith : 
+  ioPins (2) :
+        - id=vacuumOutput pin=0 (Vacuum ejector solenoid)
+        - id=vacuumSensor pin=1 (Vacuum pressure switch sense)
+  position: x=0 y=0 z=0 theta=0
+  approach: offset=(0,0,0) speed=30
+  retract: strategy= clearance=15
+  errorHandling: retryCount=0 retryDelay=0 onFailure= retractOnError=false notifyTowerLight=false logLevel=
+  speeds: approach=30 place=15 pick=15
+  scanning: enabled=true direction= slots=[25..1] scanSpeed=10 scanZ=[0..0] filterThreshold=0.5
+  scanner: enabled=true beamWidth=1 offsetFromTCP=(-12,0,4) (Through-beam laser scanner — rear mount)
+    scanner.ioPins (2) :
+      - id=laserOutput pin=2 (Laser emitter enable)
+      - id=beamBreak pin=13 (Through-beam break detector)
+  --- Component instance dump ---
+  [Component base]
+  version : 2.0
+  fileType : end_effector
+  [EndEffector]
+  model : EE-Horseshoe-200
+  manufacturer : Equipe Technologies
+  type : vacuum_gripper
+  style : horseshoe
+  description : Horseshoe (fork) vacuum end-effector — U-shaped for pin handoff compatibility
+    units:
+      length : mm
+      angle : deg
+      pressure : kPa
+      force : N
+      mass : kg
+      time : ms
+    geometry:
+      innerRadius : 85
+      outerRadius : 100
+      gapAngle : 30
+      thickness : 2
+      description : U-shaped fork — gap allows pins to pass through during wafer handoff
+    vacuum:
+      channels : 1
+      holdingForce : 2
+      settleTime : 200
+      threshold : 0.5
+      description : Single vacuum channel for wafer retention
+    waferCompatibility:
+      diameters : [150, 200]
+      maxWeight : 0.2
+      description : Compatible wafer sizes and max payload
+    scanner:
+      mountable : true
+      mountPosition : rear
+      scannerType : laser_line
+      description : Rear mount point for through-beam laser scanner used for cassette mapping
+    physical:
+      weight : 0.15
+      material : ceramic
+      description : Low mass for minimal deflection at speed
+    ioPins (2) :
+      - id=vacuumOutput dir=output signal=digital count=1 voltage= debounce=0ms (Vacuum ejector solenoid)
+      - id=vacuumSensor dir=input signal=digital count=1 voltage= debounce=0ms (Vacuum pressure switch sense)
+    ioPinsRequiredScanner (2) :
+      - id=laserOutput dir=output signal=digital count=1 voltage= debounce=0ms (Laser emitter enable)
+      - id=beamBreak dir=input signal=digital count=1 voltage= debounce=0ms (Through-beam break detector)
+    metadata.variants (5) :
+      - model=EE-Horseshoe-150 style= innerRadius=65 outerRadius=78 width=0 length=0 thickness=0 waferDiameters=[100, 150] (Horseshoe for 150mm wafers)
+      - model=EE-Horseshoe-200 style= innerRadius=85 outerRadius=100 width=0 length=0 thickness=0 waferDiameters=[150, 200] (Horseshoe for 200mm wafers)
+      - model=EE-Horseshoe-300 style= innerRadius=130 outerRadius=152 width=0 length=0 thickness=0 waferDiameters=[200, 300] (Horseshoe for 300mm wafers)
+      - model=EE-Blade-200 style=blade innerRadius=0 outerRadius=0 width=40 length=210 thickness=1.5 (Blade for 200mm — pin-loading pre-aligners)
+      - model=EE-Bernoulli-200 style=bernoulli innerRadius=0 outerRadius=0 width=0 length=0 thickness=0 (Non-contact Bernoulli gripper — air cushion, no vacuum marks)
+    metadata.notes : [Horseshoe is standard for chuck-loading pre-aligners (PRE-200, PRE-300), Blade is required for pin-loading pre-aligners (PRE-201, PRE-301), Scanner mount adds ~12mm offset from TCP — configure in WorkCell]
+========================================
+END WORKCELL DUMP
+========================================

@@ -1,0 +1,180 @@
+#include <fstream>
+
+#include <nlohmann/json.hpp>
+
+#include "Agent/Agent.h"
+
+using json = nlohmann::json;
+
+Agent::Agent()
+{
+    // Constructeur par défaut, ne charge rien
+}
+
+Agent::Agent(const std::string& filePath)
+{
+    loadFromFile(filePath);
+}
+
+// -----------------------------------------------------------------------------
+// Charger le fichier JSON, retourne true si OK, false + lastError() sinon
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Remplit un NetworkEndpoint depuis un objet JSON.
+ *
+ * Si la clé n'existe pas dans l'objet parent, l'endpoint reste inchangé.
+ *
+ * @param parent  Objet JSON contenant (ou non) la clé demandée.
+ * @param key     Nom de la clé dans parent.
+ * @param out     Endpoint à remplir.
+ */
+static void readEndpoint(const json& parent, const char* key, NetworkEndpoint& out)
+{
+    if (parent.contains(key)) {
+        auto& e = parent[key];
+        out.protocol = e.value("protocol", "");
+        out.address  = e.value("address", "");
+        out.port     = e.value("port", 0);
+        out.bind     = e.value("bind", false);
+        out.type     = e.value("type", "");
+        out.identity = e.value("identity", "");
+    }
+}
+
+bool Agent::loadFromFile(const std::string& filePath)
+{
+    std::ifstream ifs(filePath);
+    if (!ifs.is_open()) {
+        mLastError = "Cannot open file: " + filePath;
+        return false;
+    }
+
+    json j;
+    try {
+        j = json::parse(ifs);
+    } catch (const json::parse_error& e) {
+        mLastError = std::string("JSON parse error: ") + e.what();
+        return false;
+    }
+
+    // --- Champs racine ---
+    version     = j.value("version", "");
+    fileType     = j.value("fileType", "");
+    agentId      = j.value("agentId", "");
+    name         = j.value("name", "");
+    description  = j.value("description", "");
+    workCellPath = j.value("workCell", "");
+
+    // --- network ---
+    if (j.contains("network") && j["network"].contains("endpoints")) {
+        auto& ep = j["network"]["endpoints"];
+        readEndpoint(ep, "command",    network.command);
+        readEndpoint(ep, "telemetry",  network.telemetry);
+        readEndpoint(ep, "heartbeat",  network.heartbeat);
+        readEndpoint(ep, "eventRelay", network.eventRelay);
+    }
+
+    // --- authentication ---
+    if (j.contains("authentication")) {
+        auto& a = j["authentication"];
+        authentication.encryptionKeyPath      = a.value("encryptionKeyPath", "");
+        authentication.hardwareBindingEnabled  = a.value("hardwareBindingEnabled", false);
+    }
+
+    // --- database ---
+    if (j.contains("database")) {
+        auto& d = j["database"];
+        database.path        = d.value("path", "");
+        database.description = d.value("description", "");
+    }
+
+    // --- telemetry ---
+    if (j.contains("telemetry")) {
+        auto& t = j["telemetry"];
+        telemetry.enabled         = t.value("enabled", false);
+        telemetry.publishInterval = t.value("publishInterval", 0);
+        if (t.contains("metrics")) {
+            telemetry.metrics.clear();
+            for (const auto& m : t["metrics"])
+                telemetry.metrics.push_back(m.get<std::string>());
+        }
+    }
+
+    // --- safety ---
+    if (j.contains("safety")) {
+        auto& s = j["safety"];
+        safety.enableLimits             = s.value("enableLimits", true);
+        safety.enableCollisionDetection = s.value("enableCollisionDetection", false);
+        safety.maxJointError            = s.value("maxJointError", 1.0);
+        safety.emergencyStopEnabled     = s.value("emergencyStopEnabled", true);
+        safety.softwareEStopEnabled     = s.value("softwareEStopEnabled", true);
+        safety.watchdogTimeout          = s.value("watchdogTimeout", 5000);
+    }
+
+    // --- performance ---
+    if (j.contains("performance")) {
+        auto& p = j["performance"];
+        performance.controlLoopRate      = p.value("controlLoopRate", 100);
+        performance.controlLoopRateUnit  = p.value("controlLoopRateUnit", "Hz");
+        performance.trajectoryBufferSize = p.value("trajectoryBufferSize", 1000);
+        performance.maxCommandQueueSize  = p.value("maxCommandQueueSize", 100);
+    }
+
+    // --- simulation ---
+    if (j.contains("simulation")) {
+        auto& s = j["simulation"];
+        simulation.enabled        = s.value("enabled", false);
+        simulation.updateRate     = s.value("updateRate", 100);
+        simulation.updateRateUnit = s.value("updateRateUnit", "Hz");
+        simulation.motionProfile  = s.value("motionProfile", "trapezoidal");
+        simulation.enablePhysics  = s.value("enablePhysics", false);
+    }
+
+    // --- logging ---
+    if (j.contains("logging")) {
+        auto& l = j["logging"];
+        logging.level      = l.value("level", "INFO");
+        logging.file       = l.value("file", "");
+        logging.console    = l.value("console", true);
+        logging.maxSizeMB  = l.value("maxSizeMB", 50);
+        logging.maxBackups = l.value("maxBackups", 5);
+    }
+
+    // --- peers ---
+    if (j.contains("peers") && j["peers"].contains("agents")) {
+        peers.clear();
+        for (const auto& a : j["peers"]["agents"]) {
+            PeerEntry pe;
+            pe.agentId = a.value("agentId", "");
+            pe.role    = a.value("role", "");
+            peers.push_back(pe);
+        }
+    }
+
+    // --- metadata ---
+    if (j.contains("metadata")) {
+        auto& m = j["metadata"];
+        configVersion = m.value("configVersion", "");
+        created       = m.value("created", "");
+        modified      = m.value("modified", "");
+        if (m.contains("notes")) {
+            notes.clear();
+            for (const auto& n : m["notes"])
+                notes.push_back(n.get<std::string>());
+        }
+    }
+
+    // --- Charger le Workcell ---
+    if (!workCellPath.empty()) {
+        workcell = std::make_unique<Workcell>();
+        if (!workcell->loadFromFile(workCellPath)) {
+            mLastError = "Failed to load workcell: " + workcell->lastError();
+            return false;
+        }
+    }
+
+    mLastFilePath = filePath;
+    mLastError.clear();
+    return true;
+}

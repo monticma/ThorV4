@@ -1,0 +1,453 @@
+{
+  "$schema": "../Schemas/workcell.schema.json",
+  "version": "3.0",
+  "fileType": "workcell",
+
+  "cellId": "CELL-ATM100-001",
+  "cellType": "wafer_handling",
+  "description": "ATM-100 Wafer handling cell with pre-aligner and linear track",
+
+  "units": {
+    "length": "mm",
+    "angle": "deg",
+    "time": "ms",
+    "linearVelocity": "mm/s",
+    "angularVelocity": "deg/s",
+    "linearAcceleration": "mm/s2",
+    "angularAcceleration": "deg/s2",
+    "pressure": "kPa",
+    "speed": "%",
+    "description": "Default units. 'speed' fields are percentage of component max velocity."
+  },
+
+  "components": [
+    {
+      "id": "galil1",
+      "type": "controller",
+      "config": "Config/Components/Controllers/Galil_DMC8240.json",
+      "enabled": true,
+      "description": "Galil DMC-8240 motion controller — 8 axes, Ethernet",
+      "connection": {
+        "protocol": "tcp",
+        "channels": {
+          "motion": {
+            "address": "localhost",
+            "port": 2323
+          },
+          "telemetry": {
+            "address": "localhost",
+            "port": 2323
+          }
+        },
+        "timeout": 5000
+      },
+      "axisMapping": [
+        {
+          "controllerAxis": "A",
+          "component": "robot",
+          "axis": "Theta",
+          "role": "rotation",
+          "countsPerUnit": 1000.0,
+          "description": "Robot base rotation"
+        },
+        {
+          "controllerAxis": "B",
+          "component": "robot",
+          "axis": "Elbow",
+          "role": "extension",
+          "countsPerUnit": 1000.0,
+          "description": "Robot frog-leg articulation"
+        },
+        {
+          "controllerAxis": "C",
+          "component": "robot",
+          "axis": "Z",
+          "role": "vertical",
+          "countsPerUnit": 1000.0,
+          "description": "Robot vertical translation"
+        },
+        {
+          "controllerAxis": "D",
+          "component": "track",
+          "axis": "Linear",
+          "role": "translation",
+          "countsPerUnit": 1000.0,
+          "description": "Linear track translation"
+        },
+        {
+          "controllerAxis": "E",
+          "component": "aligner",
+          "axis": "Rotation",
+          "role": "rotation",
+          "countsPerUnit": 1000.0,
+          "description": "Pre-aligner chuck rotation"
+        },
+        {
+          "controllerAxis": "F",
+          "component": "aligner",
+          "axis": "Radial",
+          "role": "centering",
+          "countsPerUnit": 1000.0,
+          "description": "Pre-aligner radial centering"
+        },
+        {
+          "controllerAxis": "G",
+          "component": "aligner",
+          "axis": "PinLift",
+          "role": "vertical",
+          "countsPerUnit": 1000.0,
+          "description": "Pre-aligner pin lift"
+        },
+        {
+          "controllerAxis": "H",
+          "component": "flipper",
+          "axis": "Rotation",
+          "role": "rotation",
+          "countsPerUnit": 1000.0,
+          "description": "Flipper"
+        }
+      ]
+    },
+    {
+      "id": "robot",
+      "type": "robot",
+      "config": "Config/Components/Robots/ATM100V2.json",
+      "controller": "galil1",
+      "controllerAxes": ["A", "B", "C"],
+      "enabled": true,
+      "description": "ATM-100 Atmospheric Frog-leg SCARA — 3 DOF (Theta, Elbow, Z)",
+      "teachPoints": {
+        "home":                { "dbKey": "home",                "coordinateFrame": "joint", "required": true, "description": "Robot home — arm fully retracted, safe Z" },
+        "alignerApproach":     { "dbKey": "alignerApproach",     "coordinateFrame": "joint", "required": true, "description": "Safe approach above aligner" },
+        "alignerPlace":        { "dbKey": "alignerPlace",        "coordinateFrame": "joint", "required": true, "description": "Wafer placement on aligner chuck" },
+        "alignerPick":         { "dbKey": "alignerPick",         "coordinateFrame": "joint", "required": true, "description": "Wafer pick-up after alignment" },
+        "alignerRetract":      { "dbKey": "alignerRetract",      "coordinateFrame": "joint", "required": true, "description": "Safe retract before alignment cycle" },
+        "cassette1Approach":   { "dbKey": "cassette1Approach",   "coordinateFrame": "joint", "required": true, "description": "Safe approach in front of cassette" },
+        "cassette1Slot1":      { "dbKey": "cassette1Slot1",      "coordinateFrame": "joint", "required": true, "description": "Slot 1 reference — other slots computed from pitch" },
+        "cassette1InsertDepth":{ "dbKey": "cassette1InsertDepth","coordinateFrame": "joint", "required": true, "description": "Full insertion depth inside cassette" },
+        "cassette1ScanStart":  { "dbKey": "cassette1ScanStart",  "coordinateFrame": "joint", "required": true, "description": "Start position for mapping scan" },
+        "cassette1Retract":    { "dbKey": "cassette1Retract",    "coordinateFrame": "joint", "required": true, "description": "Safe retract after cassette operation" },
+        "cassette2Approach":   { "dbKey": "cassette2Approach",   "coordinateFrame": "joint", "required": true, "description": "Safe approach to cassette 2" },
+        "cassette2Slot1":      { "dbKey": "cassette2Slot1",      "coordinateFrame": "joint", "required": true, "description": "Slot 1 reference for cassette 2" },
+        "cassette2InsertDepth":{ "dbKey": "cassette2InsertDepth","coordinateFrame": "joint", "required": true, "description": "Full insert depth for cassette 2" },
+        "cassette2ScanStart":  { "dbKey": "cassette2ScanStart",  "coordinateFrame": "joint", "required": true, "description": "Scan start for cassette 2" },
+        "cassette2Retract":    { "dbKey": "cassette2Retract",    "coordinateFrame": "joint", "required": true, "description": "Safe retract from cassette 2" },
+        "processApproach":     { "dbKey": "processApproach",     "coordinateFrame": "joint", "required": true, "description": "Safe approach above process chamber" },
+        "processPlace":        { "dbKey": "processPlace",        "coordinateFrame": "joint", "required": true, "description": "Wafer placement in process chamber" },
+        "processPick":         { "dbKey": "processPick",         "coordinateFrame": "joint", "required": true, "description": "Wafer pick-up after processing" },
+        "processRetract":      { "dbKey": "processRetract",      "coordinateFrame": "joint", "required": true, "description": "Safe retract from process chamber" }
+      }
+    },
+    {
+      "id": "track",
+      "type": "linear_track",
+      "config": "Config/Components/Tracks/Track_600mm.json",
+      "controller": "galil1",
+      "controllerAxes": ["D"],
+      "enabled": true,
+      "overrides": {},
+      "teachPoints": {
+        "home":              { "dbKey": "track.home",              "coordinateFrame": "joint", "required": true, "description": "Track home (zero position)" },
+        "cassette1Station":  { "dbKey": "track.cassette1Station",  "coordinateFrame": "joint", "required": true, "description": "Track position to reach cassette 1" },
+        "alignerStation":    { "dbKey": "track.alignerStation",    "coordinateFrame": "joint", "required": true, "description": "Track position to reach pre-aligner" },
+        "processStation":    { "dbKey": "track.processStation",    "coordinateFrame": "joint", "required": true, "description": "Track position to reach process zone" }
+      }
+    },
+    {
+      "id": "flipper",
+      "type": "flipper",
+      "config": "Config/Components/Flippers/Flipper_Standard.json",
+      "controller": "galil1",
+      "controllerAxes": ["H"],
+      "enabled": false,
+      "mutuallyExclusiveWith": "track",
+      "teachPoints": {
+        "home":    { "dbKey": "flipper.home",    "coordinateFrame": "joint", "required": true, "description": "Flipper home (horizontal)" },
+        "flipped": { "dbKey": "flipper.flipped", "coordinateFrame": "joint", "required": true, "description": "Flipper 180° inverted position" }
+      }
+    },
+    {
+      "id": "aligner",
+      "type": "pre_aligner",
+      "config": "Config/Components/Aligners/PRE-200.json",
+      "controller": "galil1",
+      "controllerAxes": ["E", "F", "G"],
+      "enabled": true,
+      "overrides": {
+        "alignment": {
+          "defaultWaferSize": 200,
+          "settleTime": 300,
+          "timeout": 15000
+        }
+      },
+      "ioPins": [
+        { "id": "startAlign",         "pin": 3,  "description": "Start alignment trigger" },
+        { "id": "alignDone",          "pin": 4,  "description": "Alignment complete signal" },
+        { "id": "alignError",         "pin": 5,  "description": "Alignment error signal" },
+        { "id": "chuckVacuum",        "pin": 10, "description": "Chuck vacuum solenoid" },
+        { "id": "chuckVacuumSense",   "pin": 11, "description": "Chuck vacuum pressure switch" },
+        { "id": "pinLift",            "pin": 12, "description": "Pin lift solenoid" }
+      ],
+      "retract": {
+        "strategy": "retractRadial",
+        "clearance": 15.0,
+        "description": "Robot retracts radially after placing, before alignment"
+      },
+      "errorHandling": {
+        "retryCount": 2,
+        "retryDelay": 1000,
+        "onFailure": "abort_and_retract",
+        "retractOnError": true,
+        "notifyTowerLight": true,
+        "logLevel": "error",
+        "description": "On error: retry, then abort + retract + signal tower"
+      },
+      "speeds": {
+        "approach": 30,
+        "place": 15,
+        "pick": 15,
+        "description": "Percentage of max velocity per phase"
+      }
+    },
+    {
+      "id": "cassette1",
+      "type": "cassette",
+      "config": "Config/Components/Cassettes/FOUP25_200mm.json",
+      "controller": "galil1",
+      "enabled": true,
+      "params": {
+        "stationLetter": "A"
+      },
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "theta": 0.0,
+        "description": "Base slot 1 position — override with taught values"
+      },
+      "ioPins": [
+        { "id": "cassettePresence", "pin": 20, "description": "Cassette present sensor" },
+        { "id": "doorInterlock",    "pin": 21, "description": "FOUP door interlock status" }
+      ],
+      "approach": {
+        "offset": { "x": -25.0, "y": 0.0, "z": 0.0 },
+        "speed": 30,
+        "description": "Offset from slot position for safe approach"
+      },
+      "retract": {
+        "strategy": "retractRadial",
+        "clearance": 15.0,
+        "description": "After pick/place, retract arm radially"
+      },
+      "scanning": {
+        "enabled": true,
+        "direction": "top_to_bottom",
+        "startSlot": 25,
+        "endSlot": 1,
+        "scanSpeed": 10.0,
+        "scanStartZ": 162.0,
+        "scanEndZ": 3.175,
+        "filterThreshold": 0.5,
+        "description": "Laser scan — Z positions auto-computed from geometry"
+      }
+    },
+    {
+      "id": "cassette2",
+      "type": "cassette",
+      "config": "Config/Components/Cassettes/FOUP25_200mm.json",
+      "controller": "galil1",
+      "enabled": false,
+      "params": {
+        "stationLetter": "B"
+      },
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0,
+        "theta": 0.0,
+        "description": "Base slot 1 position — override with taught values"
+      },
+      "ioPins": [
+        { "id": "cassettePresence", "pin": 22, "description": "Cassette 2 present sensor" },
+        { "id": "doorInterlock",    "pin": 23, "description": "Cassette 2 door interlock" }
+      ],
+      "approach": {
+        "offset": { "x": -25.0, "y": 0.0, "z": 0.0 },
+        "speed": 30,
+        "description": "Offset from slot position for safe approach"
+      },
+      "retract": {
+        "strategy": "retractRadial",
+        "clearance": 15.0,
+        "description": "After pick/place, retract arm radially"
+      },
+      "scanning": {
+        "enabled": true,
+        "direction": "top_to_bottom",
+        "startSlot": 25,
+        "endSlot": 1,
+        "scanSpeed": 10.0,
+        "scanStartZ": 162.0,
+        "scanEndZ": 3.175,
+        "filterThreshold": 0.5,
+        "description": "Same scan parameters as cassette1"
+      }
+    },
+    {
+      "id": "processZone1",
+      "type": "process_zone",
+      "config": "Config/Components/ProcessZones/GenericChamber.json",
+      "controller": "galil1",
+      "enabled": true,
+      "overrides": {
+        "timeout": 300000
+      },
+      "params": {
+        "name": "Process Chamber 1"
+      },
+      "retract": {
+        "strategy": "retractRadial",
+        "clearance": 20.0,
+        "description": "Retract arm radially after placing/picking wafer"
+      },
+      "ioPins": [
+        { "id": "ready",        "pin": 6,  "description": "Chamber ready signal" },
+        { "id": "startProcess", "pin": 7,  "description": "Start process trigger" },
+        { "id": "processing",   "pin": 8,  "description": "Process in progress" },
+        { "id": "done",         "pin": 9,  "description": "Process complete" },
+        { "id": "error",        "pin": 14, "description": "Process error signal" }
+      ],
+      "errorHandling": {
+        "onFailure": "abort_and_retract",
+        "retractOnError": true,
+        "notifyTowerLight": true,
+        "description": "On process error: abort, retract, signal tower"
+      },
+      "speeds": {
+        "approach": 30,
+        "place": 10,
+        "pick": 10,
+        "description": "Percentage of max velocity"
+      }
+    },
+    {
+      "id": "towerLight",
+      "type": "signal_tower",
+      "config": "Config/Components/SignalTowers/PATLITE-LR6-3.json",
+      "controller": "galil1",
+      "enabled": true,
+      "ioPins": [
+        { "id": "greenLight",  "pin": 16, "description": "Green lamp control" },
+        { "id": "yellowLight", "pin": 17, "description": "Yellow lamp control" },
+        { "id": "redLight",    "pin": 18, "description": "Red lamp control" },
+        { "id": "buzzer",      "pin": 19, "description": "Buzzer control" }
+      ]
+    },
+    {
+      "id": "cycleCounter",
+      "type": "cycle_counter",
+      "config": "Config/Components/CycleCounters/CycleCounter_Default.json",
+      "enabled": true,
+      "description": "Service component — counts motion cycles and errors via EventBus"
+    },
+    {
+      "id": "endEffector1",
+      "type": "end_effector",
+      "config": "Config/Components/EndEffectors/EE_Horseshoe_200mm.json",
+      "controller": "galil1",
+      "attachedTo": "robot",
+      "enabled": true,
+      "description": "Horseshoe vacuum end-effector with through-beam scanner",
+      "ioPins": [
+        { "id": "vacuumOutput", "pin": 0, "description": "Vacuum ejector solenoid" },
+        { "id": "vacuumSensor", "pin": 1, "description": "Vacuum pressure switch sense" }
+      ],
+      "scanner": {
+        "enabled": true,
+        "offsetFromTCP": { "x": -12.0, "y": 0.0, "z": 4.0 },
+        "ioPins": [
+          { "id": "laserOutput", "pin": 2,  "description": "Laser emitter enable" },
+          { "id": "beamBreak",   "pin": 13, "description": "Through-beam break detector" }
+        ],
+        "beamWidth": 1.0,
+        "description": "Through-beam laser scanner — rear mount"
+      }
+    }
+  ],
+
+  "workflow": {
+    "defaultSequence": "scan_then_process_all",
+    "processingOrder": "bottom_to_top",
+    "scanBeforeEachCassette": true,
+    "alignBeforeProcess": true,
+    "returnAfterProcess": true,
+    "returnToSameSlot": true,
+    "pauseOnCassetteExhausted": true,
+    "autoResumeOnNewCassette": true,
+    "operatorInterface": {
+      "resumeButtonPin": 24,
+      "resumeButtonController": "galil1",
+      "description": "Physical resume button — allows operator to resume after cassette swap"
+    },
+    "speeds": {
+      "transit": 100,
+      "approach": 30,
+      "insertCassette": 15,
+      "scan": 10,
+      "description": "Percentage of max velocity per workflow phase"
+    },
+    "retract": {
+      "defaultStrategy": "retractRadial",
+      "defaultClearance": 15.0,
+      "retractBeforeRotation": true,
+      "description": "Always retract arm before theta rotation for safety"
+    },
+    "timings": {
+      "vacuumSettle": 200,
+      "placeDwell": 100,
+      "pickDwell": 100,
+      "cassetteSwapTimeout": 120000,
+      "description": "All values in ms (see top-level units)"
+    }
+  },
+
+  "workspace": {
+    "cellBoundary": {
+      "min": { "x": -250.0, "y": -150.0, "z": 0.0 },
+      "max": { "x": 250.0, "y": 250.0, "z": 200.0 },
+      "description": "Physical cell boundary — robot must not exceed these limits"
+    },
+    "exclusionZones": [
+      {
+        "name": "aligner_body",
+        "type": "cylinder",
+        "center": { "x": 0.0, "y": 180.0, "z": 25.0 },
+        "radius": 35.0,
+        "height": 50.0,
+        "description": "Pre-aligner body — avoid collision"
+      },
+      {
+        "name": "cassette1_body",
+        "type": "box",
+        "min": { "x": 175.0, "y": -110.0, "z": 0.0 },
+        "max": { "x": 230.0, "y": -50.0, "z": 170.0 },
+        "description": "Cassette 1 volume — approach from front only"
+      }
+    ]
+  },
+
+  "metadata": {
+    "configVersion": "3.0",
+    "created": "2026-06-20",
+    "modified": "2026-06-20",
+    "notes": [
+      "WorkCell v3.0 — standardized axes[], ioPins[], units enforcement",
+      "All components use Config/Components/* standardized templates",
+      "ioPins uses structured format: id, pin, direction/signalType from template",
+      "teachPoints coordinates stored in agent DB, referenced by dbKey",
+      "axisMapping[].axis references axes[].name (not joints[].name)",
+      "Controller connection and axisMapping are in the controller component entry",
+      "No separate root 'controller' or 'endEffector' sections — everything in components[]"
+    ]
+  }
+}

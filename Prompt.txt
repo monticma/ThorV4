@@ -1,0 +1,14 @@
+ok maintenant on va faire une analyse comparative des fichiers json.
+
+Le principe c'est que:
+1) Workcell.json permet de definir une zone de travail dans laquelle prennent place plusieurs types de composants.
+2) Dans un workcell il peut y avoir plusieurs fois le meme type de composant (Par exemple il peut y avoir 2 controlleurs et 2 robots ou un controlleur et 2 robots, etc...)
+3) Un controlleur permet de faire bouger des axes de composants qui y sont relies, pour autant un controlleur est aussi un composant.
+
+Je veux que:
+1) Tu analyses les differents json pour identifier les differences potentielles (par exemple Robot a des joints alors que Track et Aligner ont des axes)
+2) Comment sont definies et utilsées les unités (c'est important pour eviter de melanger des unites et casser du materiel)
+3) Tout ce qui a trait aux connexions Analogiques / Digitales avec les pins doivent être standardisés
+4) Il faut standardiser le format de definition des axes pour tous les composants mobiles (Robot, Aligner, Track, Flipper, ...)
+
+Fait une analyse de tous les fichiers pour commencer et crée un rapport dans Docs/Reports/JSON.md qui liste les differences et des propositions pour harmoniser/standardiser

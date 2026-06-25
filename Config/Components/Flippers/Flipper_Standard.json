@@ -1,0 +1,70 @@
+{
+  "$schema": "../../Schemas/flipper.schema.json",
+  "version": "2.0",
+  "fileType": "flipper",
+
+  "model": "Flipper-Standard",
+  "manufacturer": "Equipe Technologies",
+  "description": "180° wafer flipper — inverts wafer orientation between process steps",
+
+  "units": {
+    "angle": "deg",
+    "time": "ms",
+    "angularVelocity": "deg/s",
+    "angularAcceleration": "deg/s2"
+  },
+
+  "axisCount": 1,
+
+  "axes": [
+    {
+      "name": "Rotation",
+      "type": "revolute",
+      "role": "rotation",
+      "travel": { "min": 0.0, "max": 180.0, "continuous": false },
+      "maxVelocity": 90.0,
+      "maxAcceleration": 360.0,
+      "description": "Flip rotation — 0° = face up, 180° = face down"
+    }
+  ],
+
+  "homing": {
+    "method": "limit_switch",
+    "direction": "negative",
+    "velocity": 10.0,
+    "sequence": ["Rotation"],
+    "description": "Home to 0° position"
+  },
+
+  "visual": "Config/Visuals/Flipper.visual.json",
+
+  "vacuum": {
+    "topChuck": true,
+    "bottomChuck": true,
+    "description": "Vacuum on both faces to hold wafer during flip"
+  },
+
+  "physical": {
+    "width": 120.0,
+    "depth": 80.0,
+    "height": 60.0,
+    "weight": 2.0,
+    "weightUnit": "kg",
+    "description": "Flipper mechanism envelope"
+  },
+
+  "ioPinsRequired": [
+    { "id": "topVacuumOutput",    "direction": "output", "signalType": "digital", "count": 1, "description": "Top chuck vacuum solenoid" },
+    { "id": "topVacuumSensor",    "direction": "input",  "signalType": "digital", "count": 1, "description": "Top chuck vacuum sense" },
+    { "id": "bottomVacuumOutput", "direction": "output", "signalType": "digital", "count": 1, "description": "Bottom chuck vacuum solenoid" },
+    { "id": "bottomVacuumSensor", "direction": "input",  "signalType": "digital", "count": 1, "description": "Bottom chuck vacuum sense" }
+  ],
+
+  "metadata": {
+    "notes": [
+      "Shares controller axis with track — mutually exclusive",
+      "Requires vacuum hold on both faces during flip motion",
+      "Typical cycle: vacuum top → flip 180° → vacuum bottom → release top"
+    ]
+  }
+}

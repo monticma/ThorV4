@@ -1,0 +1,56 @@
+{
+  "description": "Per-robot Galil DMC-8240 profile (8 axes, conservative defaults).",
+  "format": "galil_config save",
+  "notes": [
+    "Driver verifies these values at boot; if applyOnMismatch=false, init refuses on divergence.",
+    "All values in raw controller units. See driver plugin for conversion to physical units."
+  ],
+
+  "units": {
+    "velocity": "counts/s",
+    "acceleration": "counts/s2",
+    "torque": "V",
+    "position": "counts"
+  },
+
+  "controller": {
+    "model": "DMC-8240",
+    "firmware": "0.0",
+    "serial": 0,
+    "axes": 8
+  },
+
+  "network": {
+    "ip": "192.168.0.10",
+    "port": 23
+  },
+
+  "motor": {
+    "description": "MT: 1=brushed servo, -1=reverse, 1.5/-1.5=brushless, 2/-2=stepper",
+    "MT": [1, 1, 1, 1, 1, 1, 1, 1],
+    "CE": [0, 0, 0, 0, 0, 0, 0, 0],
+    "AG": [0, 0, 0, 0, 0, 0, 0, 0]
+  },
+
+  "pid": {
+    "KP": [6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0],
+    "KI": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "KD": [64.0, 64.0, 64.0, 64.0, 64.0, 64.0, 64.0, 64.0]
+  },
+
+  "limits": {
+    "description": "TL=torque limit (V), ER=error limit (counts), OE=off-on-error, FL/BL=forward/backward limit (counts)",
+    "TL": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "ER": [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000],
+    "OE": [1, 1, 1, 1, 1, 1, 1, 1],
+    "FL": [2147483647, 2147483647, 2147483647, 2147483647, 2147483647, 2147483647, 2147483647, 2147483647],
+    "BL": [-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648]
+  },
+
+  "motion": {
+    "description": "SP=speed (counts/s), AC=acceleration (counts/s2), DC=deceleration (counts/s2)",
+    "SP": [25000, 25000, 25000, 25000, 25000, 25000, 25000, 25000],
+    "AC": [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000],
+    "DC": [10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000]
+  }
+}

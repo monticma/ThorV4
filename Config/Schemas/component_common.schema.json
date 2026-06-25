@@ -1,0 +1,54 @@
+{
+  "schemaName": "Generic Component Template v2.0",
+  "schemaVersion": "2.0",
+  "description": "Common schema rules for ALL component templates — units, axes, ioPinsRequired, homing",
+
+  "commonEntries": [
+    { "key": "version", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "fileType", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "model", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "manufacturer", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "units", "type": "OBJECT", "requirement": "REQUIRED", "description": "Minimum: length, angle, time. Other units as needed by component type." },
+    { "key": "units.length", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["mm", "m", "in"] } },
+    { "key": "units.angle", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["deg", "rad"] } },
+    { "key": "units.time", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["ms", "s"] } },
+
+    { "key": "axes", "type": "ARRAY", "requirement": "OPTIONAL", "description": "Standardized axes array for all mobile components" },
+    { "key": "axes[].name", "type": "STRING", "requirement": "REQUIRED", "description": "Unique axis name within the component" },
+    { "key": "axes[].type", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["revolute", "prismatic"] } },
+    { "key": "axes[].role", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["rotation", "extension", "vertical", "translation", "centering"] } },
+    { "key": "axes[].travel", "type": "OBJECT", "requirement": "REQUIRED" },
+    { "key": "axes[].travel.min", "type": "FLOAT", "requirement": "REQUIRED" },
+    { "key": "axes[].travel.max", "type": "FLOAT", "requirement": "REQUIRED" },
+    { "key": "axes[].travel.continuous", "type": "BOOLEAN", "requirement": "OPTIONAL" },
+    { "key": "axes[].maxVelocity", "type": "FLOAT", "requirement": "REQUIRED", "constraint": { "type": "MIN", "value": 0.0 } },
+    { "key": "axes[].maxAcceleration", "type": "FLOAT", "requirement": "REQUIRED", "constraint": { "type": "MIN", "value": 0.0 } },
+    { "key": "axes[].homePosition", "type": "FLOAT", "requirement": "OPTIONAL" },
+    { "key": "axes[].upPosition", "type": "FLOAT", "requirement": "OPTIONAL", "description": "For vertical/prismatic axes only" },
+    { "key": "axes[].downPosition", "type": "FLOAT", "requirement": "OPTIONAL", "description": "For vertical/prismatic axes only" },
+    { "key": "axes[].description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "homing", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Standardized homing for all mobile components" },
+    { "key": "homing.method", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["limit_switch", "index_pulse", "hard_stop", "encoder_index"] } },
+    { "key": "homing.direction", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["positive", "negative"] } },
+    { "key": "homing.velocity", "type": "FLOAT", "requirement": "REQUIRED" },
+    { "key": "homing.sequence", "type": "ARRAY", "requirement": "OPTIONAL", "description": "Ordered axis names for homing sequence" },
+    { "key": "homing.description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "ioPinsRequired", "type": "ARRAY", "requirement": "OPTIONAL", "description": "I/O pins this component type requires — assigned in WorkCell" },
+    { "key": "ioPinsRequired[].id", "type": "STRING", "requirement": "REQUIRED", "description": "Unique pin identifier within this component" },
+    { "key": "ioPinsRequired[].direction", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["input", "output"] } },
+    { "key": "ioPinsRequired[].signalType", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["digital", "analog", "pwm", "quadrature"] } },
+    { "key": "ioPinsRequired[].count", "type": "INTEGER", "requirement": "REQUIRED", "constraint": { "type": "MIN", "value": 1 } },
+    { "key": "ioPinsRequired[].voltage", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "ioPinsRequired[].debounceMs", "type": "INTEGER", "requirement": "OPTIONAL" },
+    { "key": "ioPinsRequired[].description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "physical", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "metadata", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "metadata.variants", "type": "ARRAY", "requirement": "OPTIONAL" },
+    { "key": "metadata.notes", "type": "ARRAY", "requirement": "OPTIONAL" }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "$schema": "Schemas/agent.schema.json",
+  "version": "1.0",
+  "fileType": "agent",
+  "agentId": "ATM100V2",
+  "name": "ATM100V2 Agent",
+  "description": "Robot agent managing an ATM-100 wafer handling work cell",
+  "workCell": "Config/WorkCells/WorkCell.json",
+
+  "network": {
+    "endpoints": {
+      "command": {
+        "protocol": "tcp",
+        "address": "0.0.0.0",
+        "port": 7001,
+        "bind": true,
+        "type": "REP"
+      },
+      "telemetry": {
+        "protocol": "tcp",
+        "address": "0.0.0.0",
+        "port": 8001,
+        "bind": true,
+        "type": "PUB"
+      },
+      "heartbeat": {
+        "protocol": "tcp",
+        "address": "localhost",
+        "port": 5557,
+        "bind": false,
+        "type": "DEALER",
+        "identity": "ATM100V2"
+      },
+      "eventRelay": {
+        "protocol": "tcp",
+        "address": "localhost",
+        "port": 5559,
+        "bind": false,
+        "type": "PUSH"
+      }
+    }
+  },
+  
+  "authentication": {
+    "encryptionKeyPath": "Config/Keys/AgentKeys/ATM100V2/symmetric.key",
+    "hardwareBindingEnabled": false
+  },
+  
+  "database": {
+    "path": "Database/ATM100V2.db",
+    "description": "Agent local database \u2014 teachPoints, event history, calibration data"
+  },
+  
+  "telemetry": {
+    "enabled": true,
+    "publishInterval": 100,
+    "metrics": [
+      "joint_positions",
+      "joint_velocities",
+      "cartesian_position",
+      "motion_state",
+      "safety_flags",
+      "cpu_usage",
+      "memory_usage"
+    ]
+  },
+  
+  "safety": {
+    "enableLimits": true,
+    "enableCollisionDetection": false,
+    "maxJointError": 1.0,
+    "emergencyStopEnabled": true,
+    "softwareEStopEnabled": true,
+    "watchdogTimeout": 5000
+  },
+  
+  "performance": {
+    "controlLoopRate": 100,
+    "controlLoopRateUnit": "Hz",
+    "trajectoryBufferSize": 1000,
+    "maxCommandQueueSize": 100
+  },
+  
+  "simulation": {
+    "enabled": false,
+    "updateRate": 100,
+    "updateRateUnit": "Hz",
+    "motionProfile": "trapezoidal",
+    "enablePhysics": false
+  },
+  
+  "logging": {
+    "level": "DEBUG",
+    "file": "Logs/ATM100V2.log",
+    "console": true,
+    "maxSizeMB": 50,
+    "maxBackups": 5
+  },
+  
+  "peers": {
+    "description": "Direct inter-agent connections \u2014 reserved for future use",
+    "agents": []
+  },
+  
+  "metadata": {
+    "configVersion": "1.0",
+    "created": "2026-02-20",
+    "modified": "2026-02-20",
+    "notes": [
+      "Agent config \u2014 software entity that loads and manages a WorkCell",
+      "workCell field references the hardware/workflow definition",
+      "plugins loaded by this agent (driver + kinematics)",
+      "network, auth, telemetry, safety, simulation \u2014 all agent-level concerns",
+      "peers section: reserved for future inter-agent direct communication",
+      "Migrated from ATM100V2.json which mixed agent + robot concerns"
+    ]
+  }
+}

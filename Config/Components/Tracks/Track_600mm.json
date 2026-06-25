@@ -1,0 +1,75 @@
+{
+  "$schema": "../../Schemas/track.schema.json",
+  "version": "2.0",
+  "fileType": "track",
+
+  "model": "Track-600",
+  "manufacturer": "Equipe Technologies",
+  "description": "600mm linear track — extends robot reach to multiple stations along rail",
+
+  "units": {
+    "length": "mm",
+    "time": "ms",
+    "linearVelocity": "mm/s",
+    "linearAcceleration": "mm/s2"
+  },
+
+  "axisCount": 1,
+
+  "axes": [
+    {
+      "name": "Linear",
+      "type": "prismatic",
+      "role": "translation",
+      "travel": { "min": 0.0, "max": 600.0, "continuous": false },
+      "maxVelocity": 100.0,
+      "maxAcceleration": 500.0,
+      "description": "Linear translation along rail"
+    }
+  ],
+
+  "homing": {
+    "method": "limit_switch",
+    "direction": "negative",
+    "velocity": 10.0,
+    "sequence": ["Linear"],
+    "description": "Home to negative limit switch"
+  },
+
+  "visual": "Config/Visuals/Track.visual.json",
+
+  "mechanical": {
+    "guideType": "linear_ball_bearing",
+    "driveType": "ball_screw",
+    "pitch": 5.0,
+    "description": "Ball screw drive, linear bearing guides"
+  },
+
+  "physical": {
+    "length": 750.0,
+    "width": 120.0,
+    "height": 85.0,
+    "weight": 12.0,
+    "weightUnit": "kg",
+    "mountingPattern": "4-bolt_M8",
+    "description": "Overall dimensions including end brackets"
+  },
+
+  "ioPinsRequired": [
+    { "id": "negativeLimit", "direction": "input", "signalType": "digital", "count": 1, "description": "Negative limit switch" },
+    { "id": "positiveLimit", "direction": "input", "signalType": "digital", "count": 1, "description": "Positive limit switch" },
+    { "id": "homeSwitch",    "direction": "input", "signalType": "digital", "count": 1, "description": "Home reference switch" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "Track-300", "travel": 300.0, "description": "Short track — 2 stations" },
+      { "model": "Track-600", "travel": 600.0, "description": "Standard track — 3-4 stations" },
+      { "model": "Track-1000", "travel": 1000.0, "description": "Long track — 5+ stations" }
+    ],
+    "notes": [
+      "Track and flipper are mutually exclusive on the same controller axis",
+      "Payload capacity depends on robot weight — check mechanical specs"
+    ]
+  }
+}

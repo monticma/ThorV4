@@ -1,0 +1,80 @@
+{
+  "$schema": "../../Schemas/end_effector.schema.json",
+  "version": "2.0",
+  "fileType": "end_effector",
+
+  "model": "EE-Horseshoe-200",
+  "manufacturer": "Equipe Technologies",
+  "type": "vacuum_gripper",
+  "style": "horseshoe",
+  "description": "Horseshoe (fork) vacuum end-effector — U-shaped for pin handoff compatibility",
+
+  "units": {
+    "length": "mm",
+    "angle": "deg",
+    "time": "ms",
+    "pressure": "kPa",
+    "force": "N",
+    "mass": "kg"
+  },
+
+  "geometry": {
+    "innerRadius": 85.0,
+    "outerRadius": 100.0,
+    "gapAngle": 30.0,
+    "thickness": 2.0,
+    "description": "U-shaped fork — gap allows pins to pass through during wafer handoff"
+  },
+
+  "vacuum": {
+    "channels": 1,
+    "holdingForce": 2.0,
+    "settleTime": 200,
+    "threshold": 0.5,
+    "description": "Single vacuum channel for wafer retention"
+  },
+
+  "waferCompatibility": {
+    "diameters": [150, 200],
+    "maxWeight": 0.2,
+    "description": "Compatible wafer sizes and max payload"
+  },
+
+  "scanner": {
+    "mountable": true,
+    "mountPosition": "rear",
+    "scannerType": "laser_line",
+    "description": "Rear mount point for through-beam laser scanner used for cassette mapping"
+  },
+
+  "physical": {
+    "weight": 0.15,
+    "material": "ceramic",
+    "description": "Low mass for minimal deflection at speed"
+  },
+
+  "ioPinsRequired": [
+    { "id": "vacuumOutput", "direction": "output", "signalType": "digital", "count": 1, "description": "Vacuum ejector solenoid" },
+    { "id": "vacuumSensor", "direction": "input",  "signalType": "digital", "count": 1, "description": "Vacuum pressure switch sense" }
+  ],
+
+  "ioPinsRequiredScanner": [
+    { "id": "laserOutput",   "direction": "output", "signalType": "digital", "count": 1, "description": "Laser emitter enable" },
+    { "id": "beamBreak",     "direction": "input",  "signalType": "digital", "count": 1, "description": "Through-beam break detector" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "EE-Horseshoe-150", "innerRadius": 65.0, "outerRadius": 78.0, "waferDiameters": [100, 150], "description": "Horseshoe for 150mm wafers" },
+      { "model": "EE-Horseshoe-200", "innerRadius": 85.0, "outerRadius": 100.0, "waferDiameters": [150, 200], "description": "Horseshoe for 200mm wafers" },
+      { "model": "EE-Horseshoe-300", "innerRadius": 130.0, "outerRadius": 152.0, "waferDiameters": [200, 300], "description": "Horseshoe for 300mm wafers" },
+      { "model": "EE-Blade-200", "style": "blade", "width": 40.0, "length": 210.0, "thickness": 1.5, "description": "Blade for 200mm — pin-loading pre-aligners" },
+      { "model": "EE-Bernoulli-200", "style": "bernoulli", "description": "Non-contact Bernoulli gripper — air cushion, no vacuum marks" }
+    ],
+    "notes": [
+      "Horseshoe is standard for chuck-loading pre-aligners (PRE-200, PRE-300)",
+      "Blade is required for pin-loading pre-aligners (PRE-201, PRE-301)",
+      "Scanner mount adds ~12mm offset from TCP — configure in WorkCell"
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "type": "Frog Leg (R R P)",
+  "description": "ATM100 kinematics - Frog-Leg (R-R-P)",
+  "degreesOfFreedom": 3,
+
+  "units": {
+    "length": "mm",
+    "angle": "deg"
+  },
+
+  "linkLengths": {
+    "L1": 107.95,
+    "L2": 107.95,
+    "L3": 0.0
+  },
+  "baseHeight": 0.0,
+  "toolOffset": 0.0,
+
+  "workspace": {
+    "reachMin": 0.0,
+    "reachMax": 215.9
+  },
+
+  "axes": [
+    {
+      "name": "J1",
+      "type": "revolute",
+      "role": "rotation",
+      "controllerAxis": "A",
+      "homePosition": 0.0,
+      "description": "Revolute joint 1 — Theta"
+    },
+    {
+      "name": "J2",
+      "type": "revolute",
+      "role": "extension",
+      "controllerAxis": "B",
+      "homePosition": 0.0,
+      "description": "Revolute joint 2 — Elbow"
+    },
+    {
+      "name": "J3",
+      "type": "prismatic",
+      "role": "vertical",
+      "controllerAxis": "C",
+      "homePosition": 0.0,
+      "description": "Prismatic joint 3 — Z"
+    }
+  ],
+
+  "notes": [
+    "Robot: ATM100",
+    "Pattern: Frog-Leg (R-R-P)",
+    "Generated: 2025-12-21 22:31:13",
+    "Link lengths are runtime configurable via configure() function"
+  ]
+}

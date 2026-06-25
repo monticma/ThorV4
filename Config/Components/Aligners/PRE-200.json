@@ -1,0 +1,122 @@
+{
+  "$schema": "../../Schemas/aligner.schema.json",
+  "version": "2.0",
+  "fileType": "aligner",
+
+  "model": "PRE-200",
+  "manufacturer": "Equipe Technologies",
+  "description": "3-axis atmospheric pre-aligner — chuck loading, horseshoe end-effector compatible",
+
+  "units": {
+    "length": "mm",
+    "angle": "deg",
+    "time": "ms",
+    "linearVelocity": "mm/s",
+    "angularVelocity": "deg/s",
+    "linearAcceleration": "mm/s2",
+    "angularAcceleration": "deg/s2"
+  },
+
+  "axisCount": 3,
+  "loadType": "chuck",
+
+  "axes": [
+    {
+      "name": "Rotation",
+      "type": "revolute",
+      "role": "rotation",
+      "travel": { "min": 0.0, "max": 360.0, "continuous": true },
+      "maxVelocity": 360.0,
+      "maxAcceleration": 720.0,
+      "description": "Chuck rotation for notch/flat edge detection"
+    },
+    {
+      "name": "Radial",
+      "type": "prismatic",
+      "role": "centering",
+      "travel": { "min": -5.0, "max": 5.0, "continuous": false },
+      "maxVelocity": 20.0,
+      "maxAcceleration": 100.0,
+      "description": "Lateral centering — shifts wafer to center after CCD analysis"
+    },
+    {
+      "name": "PinLift",
+      "type": "prismatic",
+      "role": "vertical",
+      "travel": { "min": 0.0, "max": 15.0, "continuous": false },
+      "maxVelocity": 10.0,
+      "maxAcceleration": 50.0,
+      "upPosition": 12.0,
+      "downPosition": 0.0,
+      "description": "Vertical pin lift — raises/lowers wafer for robot handoff"
+    }
+  ],
+
+  "homing": {
+    "method": "limit_switch",
+    "direction": "negative",
+    "velocity": 10.0,
+    "sequence": ["PinLift", "Radial", "Rotation"],
+    "description": "Home pin lift down, radial center, then rotation zero"
+  },
+
+  "alignment": {
+    "modes": ["notch", "flat"],
+    "autoDetect": true,
+    "waferSizes": [76, 100, 125, 150, 200],
+    "defaultWaferSize": 200,
+    "sensorType": "CCD_linear_array",
+    "lightSource": "LED_array",
+    "settleTime": 300,
+    "maxAlignmentTime": 15000,
+    "repeatability": 0.05,
+    "repeatabilityUnit": "mm",
+    "description": "CCD edge detection — auto-detects notch or flat orientation"
+  },
+
+  "visual": "Config/Visuals/Aligner.visual.json",
+
+  "pinAssembly": {
+    "pinCount": 3,
+    "pinType": "short",
+    "vacuumAssisted": true,
+    "description": "3 vacuum pins around chuck — short pins for horseshoe EE compatibility"
+  },
+
+  "compatibleEndEffectors": ["horseshoe", "blade"],
+
+  "physical": {
+    "chuckDiameter": 180.0,
+    "bodyDiameter": 120.0,
+    "height": 95.0,
+    "weight": 4.5,
+    "weightUnit": "kg",
+    "mountingPattern": "4-bolt_M6",
+    "description": "Mechanical envelope for collision avoidance planning"
+  },
+
+  "ioPinsRequired": [
+    { "id": "startAlign",     "direction": "output", "signalType": "digital", "count": 1, "description": "Start alignment trigger" },
+    { "id": "alignDone",      "direction": "input",  "signalType": "digital", "count": 1, "description": "Alignment complete signal" },
+    { "id": "alignError",     "direction": "input",  "signalType": "digital", "count": 1, "description": "Alignment error signal" },
+    { "id": "chuckVacuum",    "direction": "output", "signalType": "digital", "count": 1, "description": "Chuck vacuum solenoid" },
+    { "id": "chuckVacuumSense", "direction": "input",  "signalType": "digital", "count": 1, "description": "Chuck vacuum pressure switch" },
+    { "id": "pinLift",        "direction": "output", "signalType": "digital", "count": 1, "description": "Pin lift solenoid" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "PRE-050", "axisCount": 1, "loadType": "chuck", "waferSizes": [76, 100, 125, 150, 200], "description": "Single-axis, no pins, lower cost" },
+      { "model": "PRE-200", "axisCount": 3, "loadType": "chuck", "waferSizes": [76, 100, 125, 150, 200], "description": "3-axis, chuck loading, horseshoe EE" },
+      { "model": "PRE-201", "axisCount": 3, "loadType": "pin",   "waferSizes": [76, 100, 125, 150, 200], "description": "3-axis, pin loading, blade EE" },
+      { "model": "PRE-300", "axisCount": 3, "loadType": "chuck", "waferSizes": [150, 200, 300],          "description": "3-axis, chuck loading, 300mm capable" },
+      { "model": "PRE-301", "axisCount": 3, "loadType": "pin",   "waferSizes": [150, 200, 300],          "description": "3-axis, pin loading, 300mm capable" },
+      { "model": "PRE-350", "axisCount": 1, "loadType": "chuck", "waferSizes": [150, 200, 300],          "description": "Single-axis, no pins, 300mm capable" }
+    ],
+    "notes": [
+      "3-axis aligners have independent operation — robot can move while aligning",
+      "1-axis aligners require robot to provide R and Z movement during alignment",
+      "PRE-300/301 load type is software-configurable via SWL command"
+    ]
+  }
+}

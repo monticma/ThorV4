@@ -1,0 +1,29 @@
+{
+  "$schema": "../../Schemas/cycle_counter.schema.json",
+  "version": "2.0",
+  "fileType": "cycle_counter",
+
+  "description": "Cycle counter service component — counts motion cycles and errors via EventBus",
+
+  "units": {
+    "time": "ms"
+  },
+
+  "params": {
+    "reactions": {
+      "MOTION_COMPLETE": "increment",
+      "STATE_ERROR":     "markError"
+    }
+  },
+
+  "ioPinsRequired": [],
+
+  "metadata": {
+    "notes": [
+      "Service component — no controller, no axes, no I/O",
+      "Reacts to MOTION_COMPLETE events to count cycles",
+      "Reacts to STATE_ERROR events to count errors",
+      "Commands: getCount, reset, getStats (via executeCommand or Lua)"
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "../../Schemas/controller.schema.json",
+  "version": "2.0",
+  "fileType": "controller",
+
+  "model": "DMC-8240",
+  "manufacturer": "Galil Motion Control",
+  "family": "DMC-82x0",
+  "description": "8-axis Ethernet motion controller with coordinated motion and I/O",
+
+  "units": {
+    "length": "mm",
+    "angle": "deg",
+    "time": "ms",
+    "linearVelocity": "mm/s",
+    "angularVelocity": "deg/s",
+    "linearAcceleration": "mm/s2",
+    "angularAcceleration": "deg/s2"
+  },
+
+  "capabilities": {
+    "maxAxes": 8,
+    "axisLabels": ["A", "B", "C", "D", "E", "F", "G", "H"],
+    "coordinatedMotion": true,
+    "linearInterpolation": true,
+    "circularInterpolation": true,
+    "electronicGearing": true,
+    "encoderFeedback": true,
+    "encoderResolution": { "min": 1, "max": 16777216, "unit": "counts/rev" },
+    "pidControl": true,
+    "motionProfiles": ["trapezoidal", "s-curve"],
+    "digitalInputs": 80,
+    "digitalOutputs": 80,
+    "analogInputs": 8,
+    "analogOutputs": 8,
+    "programMemory": 1000,
+    "firmwareLanguage": "Galil DMC"
+  },
+
+  "connection": {
+    "supportedProtocols": ["tcp", "serial"],
+    "tcp": {
+      "defaultPort": 2323,
+      "commandPort": 2323,
+      "messagePort": 2324,
+      "description": "Dual TCP connection — command (synchronous) + message (asynchronous)"
+    },
+    "serial": {
+      "defaultBaud": 115200,
+      "dataBits": 8,
+      "parity": "none",
+      "stopBits": 1
+    }
+  },
+
+  "driver": {
+    "identifier": "galil_dmc8240",
+    "library": "Build/Plugins/libThorGalil_8240.so",
+    "driverConfig": "Config/Plugins/driver_galil8240.json",
+    "description": "Thor driver plugin for Galil DMC-8240"
+  },
+
+  "limits": {
+    "maxVelocity": 3000000.0,
+    "maxAcceleration": 1073740800.0,
+    "velocityUnit": "counts/s",
+    "accelerationUnit": "counts/s2",
+    "description": "Absolute controller limits in encoder counts — actual limits depend on motor and mechanism"
+  },
+
+  "ioCapabilities": {
+    "digitalInputs": 80,
+    "digitalOutputs": 80,
+    "analogInputs": 8,
+    "analogOutputs": 8,
+    "digitalVoltage": "24VDC",
+    "analogVoltage": "±10V",
+    "maxCurrentPerOutput": 500,
+    "currentUnit": "mA",
+    "description": "I/O electrical specifications for pin validation"
+  },
+
+  "metadata": {
+    "datasheet": "https://www.galil.com/motion-controllers/multi-axis/dmc-82x0",
+    "notes": [
+      "Supports 1-8 axes in increments of 2 (8210, 8220, 8240, 8260, 8280)",
+      "DMC-8240 = 4 axes standard, expandable to 8 with add-on modules",
+      "Ethernet 10/100BaseT, optionally RS-232",
+      "Can run stored programs autonomously (DR, MG, WT, etc.)"
+    ]
+  }
+}

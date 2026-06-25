@@ -1,0 +1,136 @@
+{
+  "$schema": "../../Schemas/robot.schema.json",
+  "version": "2.0",
+  "fileType": "robot",
+
+  "model": "ATM-100",
+  "manufacturer": "Equipe Technologies (PRI Automation)",
+  "description": "Atmospheric Top Mount Series 100 — 3 DOF frog-leg SCARA, 8.5in reach, 7in Z-travel",
+
+  "units": {
+    "length": "mm",
+    "angle": "deg",
+    "time": "ms",
+    "linearVelocity": "mm/s",
+    "angularVelocity": "deg/s",
+    "linearAcceleration": "mm/s2",
+    "angularAcceleration": "deg/s2"
+  },
+
+  "kinematics": {
+    "type": "custom",
+    "coordinateSystem": "cylindrical",
+    "visualizerType": "frogleg",
+    "pluginLibrary": "Build/Plugins/Kinematics/ATM/libThorKinematicsATM.so",
+    "pluginConfig": "Config/Plugins/kinematics_atm100.json",
+    "workspace": {
+      "minReach": 0.0,
+      "maxReach": 214.0,
+      "minZ": 0.0,
+      "maxZ": 177.8
+    },
+    "dhParameters": [
+      {
+        "a": 107.95,
+        "alpha": 0.0,
+        "d": 0.0,
+        "theta": "q0",
+        "type": "revolute",
+        "description": "Frame 1: Theta — Base rotation (4.25 in link)"
+      },
+      {
+        "a": 107.95,
+        "alpha": 0.0,
+        "d": 0.0,
+        "theta": "q1",
+        "type": "revolute",
+        "description": "Frame 2: Elbow — Frog-leg articulation (4.25 in link)"
+      },
+      {
+        "a": 0.0,
+        "alpha": 0.0,
+        "d": "q2",
+        "theta": 0.0,
+        "type": "prismatic",
+        "description": "Frame 3: Z — Vertical translation"
+      }
+    ]
+  },
+
+  "axes": [
+    {
+      "name": "Theta",
+      "type": "revolute",
+      "role": "rotation",
+      "travel": { "min": -180.0, "max": 180.0, "continuous": false },
+      "maxVelocity": 360.0,
+      "maxAcceleration": 1800.0,
+      "homePosition": 0.0,
+      "description": "Base rotation"
+    },
+    {
+      "name": "Elbow",
+      "type": "revolute",
+      "role": "extension",
+      "travel": { "min": -170.0, "max": 170.0, "continuous": false },
+      "maxVelocity": 360.0,
+      "maxAcceleration": 1800.0,
+      "homePosition": -100.0,
+      "description": "Frog-leg articulation"
+    },
+    {
+      "name": "Z",
+      "type": "prismatic",
+      "role": "vertical",
+      "travel": { "min": 0.0, "max": 177.8, "continuous": false },
+      "maxVelocity": 50.0,
+      "maxAcceleration": 200.0,
+      "homePosition": 0.0,
+      "upPosition": 177.8,
+      "downPosition": 0.0,
+      "description": "Vertical translation"
+    }
+  ],
+
+  "homing": {
+    "method": "limit_switch",
+    "direction": "negative",
+    "velocity": 10.0,
+    "sequence": ["Theta", "Elbow", "Z"],
+    "description": "Home Theta and Elbow first, Z last"
+  },
+
+  "capabilities": {
+    "primitives": ["moveTo", "moveJoint", "getPosition", "getStatus", "home", "emergencyStop"],
+    "features": ["cylindrical_kinematics", "frogleg_articulation", "atmospheric_handling"]
+  },
+
+  "visual": "Config/Visuals/FrogLeg.visual.json",
+
+  "physical": {
+    "reach": 215.9,
+    "zTravel": 177.8,
+    "weight": 8.5,
+    "weightUnit": "kg",
+    "mountType": "top_mount",
+    "environment": "atmospheric",
+    "description": "8.5 in reach, 7 in Z-travel, top-mounted atmospheric"
+  },
+
+  "ioPinsRequired": [
+    { "id": "vacuumOutput", "direction": "output", "signalType": "digital", "count": 1, "description": "Vacuum ejector control" },
+    { "id": "vacuumSensor", "direction": "input", "signalType": "digital", "count": 1, "description": "Vacuum pressure switch sense" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "ATM-100", "reach": 215.9, "zTravel": 177.8, "description": "Standard 8.5in reach, 7in Z" },
+      { "model": "ATM-200", "reach": 330.2, "zTravel": 177.8, "description": "Extended 13in reach, 7in Z" }
+    ],
+    "notes": [
+      "Frog-leg mechanism: both joints rotate in same direction = radial extension",
+      "Counter-rotation = theta rotation with constant extension",
+      "DH link lengths: 107.95mm (4.25 in) each"
+    ]
+  }
+}

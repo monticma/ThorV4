@@ -1,0 +1,83 @@
+{
+  "$schema": "../../Schemas/signal_tower.schema.json",
+  "version": "2.0",
+  "fileType": "signal_tower",
+
+  "model": "PATLITE-LR6-3",
+  "manufacturer": "PATLITE",
+  "description": "3-color signal tower with buzzer — standard semiconductor equipment indicator",
+
+  "units": {
+    "time": "ms"
+  },
+
+  "lights": {
+    "count": 3,
+    "colors": ["green", "yellow", "red"],
+    "modes": ["off", "on", "blink"],
+    "description": "3-tier stack light: green (running), yellow (warning), red (error/alarm)"
+  },
+
+  "buzzer": {
+    "available": true,
+    "modes": ["off", "continuous", "double_beep", "intermittent"],
+    "description": "Piezo buzzer with multiple alert patterns"
+  },
+
+  "defaults": {
+    "blinkRateHz": 2,
+    "buzzerFrequencyHz": 2800,
+    "initialPattern": "off"
+  },
+
+  "patterns": {
+    "idle":               { "green": "off",   "yellow": "off",   "red": "off",   "buzzer": "off" },
+    "running":            { "green": "on",    "yellow": "off",   "red": "off",   "buzzer": "off" },
+    "cassette_exhausted": { "green": "off",   "yellow": "blink", "red": "off",   "buzzer": "double_beep" },
+    "aligning":           { "green": "blink", "yellow": "off",   "red": "off",   "buzzer": "off" },
+    "processing":         { "green": "on",    "yellow": "on",    "red": "off",   "buzzer": "off" },
+    "error":              { "green": "off",   "yellow": "off",   "red": "on",    "buzzer": "continuous" },
+    "emergency_stop":     { "green": "off",   "yellow": "off",   "red": "blink", "buzzer": "continuous" }
+  },
+
+  "reactions": {
+    "STATE_IDLE":        "idle",
+    "STATE_EXECUTING":   "running",
+    "STATE_ERROR":       "error",
+    "EMERGENCY_STOP":    "emergency_stop",
+    "MOTION_COMPLETE":   "idle",
+    "MOTION_FAILED":     "error",
+    "RESET_ERROR":       "idle"
+  },
+
+  "physical": {
+    "height": 295.0,
+    "diameter": 60.0,
+    "weight": 0.45,
+    "weightUnit": "kg",
+    "voltage": "24VDC",
+    "mountingType": "M12_threaded_base",
+    "protectionRating": "IP65",
+    "description": "Standard PATLITE LR6 form factor"
+  },
+
+  "ioPinsRequired": [
+    { "id": "greenLight",  "direction": "output", "signalType": "digital", "count": 1, "description": "Green lamp control" },
+    { "id": "yellowLight", "direction": "output", "signalType": "digital", "count": 1, "description": "Yellow lamp control" },
+    { "id": "redLight",    "direction": "output", "signalType": "digital", "count": 1, "description": "Red lamp control" },
+    { "id": "buzzer",      "direction": "output", "signalType": "digital", "count": 1, "description": "Buzzer control" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "PATLITE-LR6-3", "lightCount": 3, "colors": ["green", "yellow", "red"],                      "description": "3-color standard" },
+      { "model": "PATLITE-LR6-5", "lightCount": 5, "colors": ["green", "yellow", "red", "blue", "white"],     "description": "5-color extended" },
+      { "model": "PATLITE-LR4-3", "lightCount": 3, "colors": ["green", "yellow", "red"],                      "description": "3-color compact (40mm)" }
+    ],
+    "notes": [
+      "SEMI E10 defines standard signal tower color meanings for semiconductor equipment",
+      "Green = running/auto, Yellow = warning/manual, Red = error/alarm",
+      "Blue (optional) = material request, White (optional) = equipment specific"
+    ]
+  }
+}

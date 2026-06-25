@@ -1,0 +1,62 @@
+{
+  "$schema": "../../Schemas/cassette.schema.json",
+  "version": "2.0",
+  "fileType": "cassette",
+
+  "model": "FOUP-25-200",
+  "standard": "SEMI E47.1",
+  "description": "25-slot Front Opening Unified Pod for 200mm wafers — SEMI standard geometry",
+
+  "units": {
+    "length": "mm",
+    "time": "ms"
+  },
+
+  "geometry": {
+    "slotCount": 25,
+    "pitch": 6.35,
+    "offset": 3.175,
+    "stroke": 5.0,
+    "slotHeight": 0.8,
+    "waferDiameter": 200,
+    "waferThickness": 0.725,
+    "description": "pitch = center-to-center between slots, offset = Z from cassette base to slot 1 center, stroke = Z lift to clear shelf, slotHeight = shelf thickness"
+  },
+
+  "physical": {
+    "width": 240.0,
+    "depth": 240.0,
+    "height": 175.0,
+    "openingWidth": 210.0,
+    "openingHeight": 165.0,
+    "weight": 1.5,
+    "weightUnit": "kg",
+    "description": "External dimensions and front opening size"
+  },
+
+  "waferSpecs": {
+    "diameter": 200,
+    "thickness": { "min": 0.3, "max": 1.2 },
+    "material": ["silicon", "glass", "sapphire"],
+    "description": "Compatible wafer specifications"
+  },
+
+  "ioPinsRequired": [
+    { "id": "cassettePresence", "direction": "input", "signalType": "digital", "count": 1, "description": "Cassette present sensor" },
+    { "id": "doorInterlock",    "direction": "input", "signalType": "digital", "count": 1, "description": "FOUP door interlock status" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "FOUP-25-150", "waferDiameter": 150, "pitch": 6.35, "slotCount": 25, "standard": "SEMI E47.1", "description": "25-slot 150mm" },
+      { "model": "FOUP-25-200", "waferDiameter": 200, "pitch": 6.35, "slotCount": 25, "standard": "SEMI E47.1", "description": "25-slot 200mm" },
+      { "model": "FOUP-25-300", "waferDiameter": 300, "pitch": 10.0, "slotCount": 25, "standard": "SEMI E47.1", "description": "25-slot 300mm" },
+      { "model": "FOUP-13-300", "waferDiameter": 300, "pitch": 10.0, "slotCount": 13, "standard": "SEMI E47.1", "description": "13-slot 300mm" }
+    ],
+    "notes": [
+      "SEMI E47.1 defines mechanical interface for 200mm FOUPs",
+      "SEMI E1.9 defines 300mm FOUP geometry (10mm pitch)",
+      "Offset is typically pitch/2 for bottom slot centering"
+    ]
+  }
+}

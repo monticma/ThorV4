@@ -1,0 +1,58 @@
+{
+  "$schema": "../../Schemas/process_zone.schema.json",
+  "version": "2.0",
+  "fileType": "process_zone",
+
+  "model": "Generic Chamber",
+  "manufacturer": "Generic",
+  "description": "Standard process chamber with 5-wire handshake I/O protocol",
+
+  "units": {
+    "length": "mm",
+    "time": "ms"
+  },
+
+  "protocol": {
+    "type": "digital_handshake",
+    "description": "5-wire I/O handshake: ready (in), startProcess (out), processing (in), done (in), error (in)",
+    "signals": {
+      "ready":        { "direction": "input",  "description": "Chamber ready to accept wafer" },
+      "startProcess": { "direction": "output", "description": "Assert to start process cycle" },
+      "processing":   { "direction": "input",  "description": "Process in progress" },
+      "done":         { "direction": "input",  "description": "Process complete" },
+      "error":        { "direction": "input",  "description": "Process error" }
+    }
+  },
+
+  "defaults": {
+    "timeout": 30000,
+    "description": "Default process timeout in milliseconds"
+  },
+
+  "physical": {
+    "chamberType": "atmospheric",
+    "waferSizes": [150, 200, 300],
+    "description": "Compatible wafer sizes (mm)"
+  },
+
+  "ioPinsRequired": [
+    { "id": "ready",        "direction": "input",  "signalType": "digital", "count": 1, "description": "Chamber ready signal" },
+    { "id": "startProcess", "direction": "output", "signalType": "digital", "count": 1, "description": "Start process trigger" },
+    { "id": "processing",   "direction": "input",  "signalType": "digital", "count": 1, "description": "Process in progress" },
+    { "id": "done",         "direction": "input",  "signalType": "digital", "count": 1, "description": "Process complete" },
+    { "id": "error",        "direction": "input",  "signalType": "digital", "count": 1, "description": "Process error signal" }
+  ],
+
+  "metadata": {
+    "variants": [
+      { "model": "Generic Chamber",   "chamberType": "atmospheric", "description": "Atmospheric process chamber" },
+      { "model": "CVD Chamber",       "chamberType": "vacuum",      "description": "Chemical Vapor Deposition" },
+      { "model": "Etch Chamber",      "chamberType": "vacuum",      "description": "Plasma etch chamber" },
+      { "model": "Anneal Chamber",    "chamberType": "atmospheric", "description": "Thermal anneal chamber" }
+    ],
+    "notes": [
+      "All chambers use the same 5-wire handshake protocol",
+      "Timeout should be adjusted per process type (CVD: 300s, Etch: 120s, Anneal: 600s)"
+    ]
+  }
+}

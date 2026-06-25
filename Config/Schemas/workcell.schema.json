@@ -1,0 +1,102 @@
+{
+  "schemaName": "WorkCell Definition v3.0",
+  "schemaVersion": "3.0",
+  "fileType": "workcell",
+  "description": "Schema for WorkCell configuration v3.0 — unified components[], standardized axes[], ioPins[], units enforcement",
+
+  "entries": [
+    { "key": "version", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "fileType", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["workcell"] } },
+    { "key": "cellId", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "cellType", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["wafer_handling", "inspection", "metrology", "general"] } },
+    { "key": "description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "units", "type": "OBJECT", "requirement": "REQUIRED", "description": "Default units for this WorkCell — all component units must match or loading is refused" },
+    { "key": "units.length", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["mm", "m", "in"] } },
+    { "key": "units.angle", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["deg", "rad"] } },
+    { "key": "units.time", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["ms", "s"] } },
+    { "key": "units.linearVelocity", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "units.angularVelocity", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "units.linearAcceleration", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "units.angularAcceleration", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "units.pressure", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "units.speed", "type": "STRING", "requirement": "OPTIONAL", "description": "Always '%' for percentage of max velocity" },
+
+    { "key": "components", "type": "ARRAY", "requirement": "REQUIRED", "description": "ALL components including controllers — no separate root sections" },
+    { "key": "components[].id", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "components[].type", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["controller", "robot", "linear_track", "flipper", "pre_aligner", "cassette", "process_zone", "signal_tower", "cycle_counter", "end_effector"] } },
+    { "key": "components[].config", "type": "STRING", "requirement": "OPTIONAL", "description": "Path to component template JSON" },
+    { "key": "components[].controller", "type": "STRING", "requirement": "OPTIONAL", "description": "Controller component id this component is wired to" },
+    { "key": "components[].controllerAxes", "type": "ARRAY", "requirement": "OPTIONAL" },
+    { "key": "components[].enabled", "type": "BOOLEAN", "requirement": "OPTIONAL" },
+    { "key": "components[].attachedTo", "type": "STRING", "requirement": "OPTIONAL", "description": "Component id this is attached to (e.g. endEffector attachedTo robot)" },
+    { "key": "components[].mutuallyExclusiveWith", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "components[].connection", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Controller instance connection (for type=controller)" },
+    { "key": "components[].connection.protocol", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "components[].connection.channels", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].connection.timeout", "type": "INTEGER", "requirement": "OPTIONAL" },
+
+    { "key": "components[].axisMapping", "type": "ARRAY", "requirement": "OPTIONAL", "description": "Controller axis mapping (for type=controller). References axes[].name" },
+    { "key": "components[].axisMapping[].controllerAxis", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "components[].axisMapping[].component", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "components[].axisMapping[].axis", "type": "STRING", "requirement": "REQUIRED", "description": "References axes[].name in the target component template" },
+    { "key": "components[].axisMapping[].role", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "components[].axisMapping[].countsPerUnit", "type": "NUMBER", "requirement": "OPTIONAL" },
+
+    { "key": "components[].teachPoints", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Named teach points — dbKey for agent DB lookup" },
+    { "key": "components[].overrides", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Instance overrides — values clamped to template limits" },
+    { "key": "components[].params", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].position", "type": "OBJECT", "requirement": "OPTIONAL" },
+
+    { "key": "components[].ioPins", "type": "ARRAY", "requirement": "OPTIONAL", "description": "Instance pin assignments — must match ioPinsRequired from template" },
+    { "key": "components[].ioPins[].id", "type": "STRING", "requirement": "REQUIRED", "description": "Must match an id in the template's ioPinsRequired" },
+    { "key": "components[].ioPins[].pin", "type": "INTEGER", "requirement": "REQUIRED", "constraint": { "type": "MIN", "value": 0 } },
+    { "key": "components[].ioPins[].description", "type": "STRING", "requirement": "OPTIONAL" },
+
+    { "key": "components[].retract", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].retract.strategy", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["retractRadial", "retractZ", "retractToSafe"] } },
+    { "key": "components[].retract.clearance", "type": "FLOAT", "requirement": "REQUIRED" },
+
+    { "key": "components[].errorHandling", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].errorHandling.retryCount", "type": "INTEGER", "requirement": "OPTIONAL" },
+    { "key": "components[].errorHandling.retryDelay", "type": "INTEGER", "requirement": "OPTIONAL" },
+    { "key": "components[].errorHandling.onFailure", "type": "STRING", "requirement": "REQUIRED", "constraint": { "type": "ENUM", "allowedValues": ["abort_and_retract", "retry", "skip", "pause"] } },
+    { "key": "components[].errorHandling.retractOnError", "type": "BOOLEAN", "requirement": "OPTIONAL" },
+    { "key": "components[].errorHandling.notifyTowerLight", "type": "BOOLEAN", "requirement": "OPTIONAL" },
+
+    { "key": "components[].speeds", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Speed overrides as percentage of max velocity" },
+    { "key": "components[].speeds.approach", "type": "INTEGER", "requirement": "OPTIONAL" },
+    { "key": "components[].speeds.place", "type": "INTEGER", "requirement": "OPTIONAL" },
+    { "key": "components[].speeds.pick", "type": "INTEGER", "requirement": "OPTIONAL" },
+
+    { "key": "components[].approach", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].approach.offset", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].approach.speed", "type": "INTEGER", "requirement": "OPTIONAL" },
+
+    { "key": "components[].scanning", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].scanning.enabled", "type": "BOOLEAN", "requirement": "REQUIRED" },
+    { "key": "components[].scanning.direction", "type": "STRING", "requirement": "REQUIRED" },
+
+    { "key": "components[].scanner", "type": "OBJECT", "requirement": "OPTIONAL", "description": "Instance-specific scanner wiring (endEffector)" },
+    { "key": "components[].scanner.enabled", "type": "BOOLEAN", "requirement": "REQUIRED" },
+    { "key": "components[].scanner.offsetFromTCP", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "components[].scanner.ioPins", "type": "ARRAY", "requirement": "OPTIONAL" },
+
+    { "key": "workflow", "type": "OBJECT", "requirement": "REQUIRED" },
+    { "key": "workflow.defaultSequence", "type": "STRING", "requirement": "REQUIRED" },
+    { "key": "workflow.processingOrder", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "workflow.operatorInterface", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "workflow.speeds", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "workflow.retract", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "workflow.timings", "type": "OBJECT", "requirement": "OPTIONAL" },
+
+    { "key": "workspace", "type": "OBJECT", "requirement": "REQUIRED" },
+    { "key": "workspace.cellBoundary", "type": "OBJECT", "requirement": "REQUIRED" },
+    { "key": "workspace.exclusionZones", "type": "ARRAY", "requirement": "OPTIONAL" },
+
+    { "key": "metadata", "type": "OBJECT", "requirement": "OPTIONAL" },
+    { "key": "metadata.configVersion", "type": "STRING", "requirement": "OPTIONAL" },
+    { "key": "metadata.notes", "type": "ARRAY", "requirement": "OPTIONAL" }
+  ]
+}

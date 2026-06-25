@@ -1,0 +1,39 @@
+{
+  "vendor": "Galil",
+  "model": "DMC-8240",
+  "protocol": "Ethernet",
+  "description": "Galil DMC-8240 8-axis motion controller",
+
+  "numAxes": 8,
+  "timeout": 5000,
+  "pluginSearchPath": "/opt/Thor/Build/Plugins/",
+
+  "safetyLimits": {
+    "maxVelocityDegPerSec": 120.0,
+    "maxAccelerationDegPerSec2": 600.0,
+    "units": {
+      "angle": "deg",
+      "time": "s"
+    }
+  },
+
+  "safetyGate": {
+    "enabled": true,
+    "enforce": true,
+    "tlMaxV": 2.0,
+    "tlMaxVUnit": "V",
+    "requireOe": true,
+    "erMax": 20000,
+    "erMaxUnit": "counts",
+    "description": "Pre-SH validation: refuses to enable servos if TL/OE/ER violate thresholds"
+  },
+
+  "profileFile": "Config/Profiles/galil8240_default.json",
+  "applyOnMismatch": false,
+
+  "notes": [
+    "Network configuration (IP, ports) moved to WorkCell.json (single source of truth)",
+    "This file contains only driver-specific parameters (numAxes, safetyLimits, etc.)",
+    "Legacy connection string: tcp:127.0.0.1:2323 (DEPRECATED)"
+  ]
+}
