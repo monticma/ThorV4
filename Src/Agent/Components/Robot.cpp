@@ -340,10 +340,18 @@ bool Robot::moveTo(double x, double y, double z, double speed)
     }
 
     // Définir les vitesses
-    driver->setSpeeds(speedCounts);
+    if (!driver->setSpeeds(speedCounts)) {
+        mLastError = "Robot::moveTo: setSpeeds failed: " + driver->lastError();
+        return false;
+    }
 
     // Mouvement absolu
-    return driver->moveAbsolute(counts);
+    if (!driver->moveAbsolute(counts)) {
+        mLastError = "Robot::moveTo: moveAbsolute failed: " + driver->lastError();
+        return false;
+    }
+
+    return true;
 }
 
 bool Robot::moveJoint(int jointIndex, double angle, double speed)
@@ -363,11 +371,9 @@ bool Robot::moveJoint(int jointIndex, double angle, double speed)
         return false;
     }
 
-    // Calculer les counts pour le joint cible
-    double countsPerUnit = 1.0;
-    // Utiliser le countsPerUnit de l'axis mapping si disponible
-    // (sinon 1.0 par défaut)
-    double targetCounts = angle * countsPerUnit;
+    // Calculer la cible pour le joint (angle en degrés = unités utilisateur)
+    // Le contrôleur applique son propre countsPerUnit
+    double targetCounts = angle;
     currentCounts[jointIndex] = targetCounts;
 
     // Vitesse
@@ -384,8 +390,15 @@ bool Robot::moveJoint(int jointIndex, double angle, double speed)
         return false;
     }
 
-    driver->setSpeeds(speedCounts);
-    return driver->moveAbsolute(currentCounts);
+    if (!driver->setSpeeds(speedCounts)) {
+        mLastError = "Robot::moveJoint: setSpeeds failed: " + driver->lastError();
+        return false;
+    }
+    if (!driver->moveAbsolute(currentCounts)) {
+        mLastError = "Robot::moveJoint: moveAbsolute failed: " + driver->lastError();
+        return false;
+    }
+    return true;
 }
 
 bool Robot::getPosition(std::vector<double>& positionOut)
@@ -402,9 +415,21 @@ bool Robot::getPosition(std::vector<double>& positionOut)
         return false;
     }
 
+    // Convertir les counts en angles joints (radians pour revolutes)
+    // Le contrôleur (xmul/Galil) renvoie des unités utilisateur (degrés ou mm).
     std::vector<double> jointAngles;
-    for (size_t i = 0; i < axes.size() && i < counts.size(); ++i) {
-        jointAngles.push_back(counts[i]);
+    for (size_t i = 0; i < axes.size() && i < counts.size(); ++i)
+    {
+        double value = counts[i];
+
+        // Le contrôleur renvoie déjà en unités utilisateur (degrés ou mm).
+        // Pas de division par countsPerUnit — déjà fait par le contrôleur.
+
+        // degrés → radians pour les axes rotatifs
+        if (axes[i].type == "revolute")
+            value = value * M_PI / 180.0;
+
+        jointAngles.push_back(value);
     }
 
     double x, y, z;
@@ -668,8 +693,22 @@ bool Robot::jointAnglesToCounts(const std::vector<double>& jointAngles,
 {
     countsOut.clear();
 
-    for (size_t i = 0; i < axes.size() && i < jointAngles.size(); ++i) {
-        countsOut.push_back(jointAngles[i]);
+    for (size_t i = 0; i < axes.size() && i < jointAngles.size(); ++i)
+    {
+        // Les angles sont en radians (sortie IK).
+        // Pour les axes rotatifs : convertir en degrés (unités utilisateur).
+        // Pour les axes prismatiques : mm (unités utilisateur).
+        // Le contrôleur (xmul ou Galil réel) applique son propre countsPerUnit.
+        double value = jointAngles[i];
+
+        if (axes[i].type == "revolute")
+        {
+            // radians → degrés
+            value = value * 180.0 / M_PI;
+        }
+        // Pas de multiplication par countsPerUnit — le contrôleur le fait
+
+        countsOut.push_back(value);
     }
     while (countsOut.size() < 8) {
         countsOut.push_back(0.0);

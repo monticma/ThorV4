@@ -32,6 +32,7 @@ struct ComponentAxis
     double homePosition = 0.0;
     double upPosition = 0.0;
     double downPosition = 0.0;
+    double countsPerUnit = 1.0; // counts par unité (mm ou degré), peuplé par wireComponents
     std::string description;
 };
 

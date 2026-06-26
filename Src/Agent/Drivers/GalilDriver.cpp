@@ -281,18 +281,25 @@ bool GalilDriver::moveAbsolute(const std::vector<double>& counts)
         return false;
     }
 
-    // PA
+    // PA — spécifie la position cible
     std::string cmd = GalilProtocol::encodeMoveAbsolute(counts);
     if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
         return false;
     }
 
-    // BG (tous les axes)
-    std::vector<int> allAxes;
+    // BG — ne lancer que les axes dont la valeur est non nulle
+    // (les axes à 0.0 sont des placeholders pour les composants non concernés)
+    std::vector<int> activeAxes;
     for (size_t i = 0; i < counts.size(); ++i) {
-        allAxes.push_back(static_cast<int>(i));
+        if (counts[i] != 0.0) {
+            activeAxes.push_back(static_cast<int>(i));
+        }
     }
-    cmd = GalilProtocol::encodeBeginMotion(allAxes);
+    // Si toutes les valeurs sont à 0, on lance BG sur le 1er axe seulement
+    if (activeAxes.empty() && !counts.empty()) {
+        activeAxes.push_back(0);
+    }
+    cmd = GalilProtocol::encodeBeginMotion(activeAxes);
     if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
         return false;
     }
@@ -312,11 +319,17 @@ bool GalilDriver::moveRelative(const std::vector<double>& deltas)
         return false;
     }
 
-    std::vector<int> allAxes;
+    // BG — ne lancer que les axes avec delta non nul
+    std::vector<int> activeAxes;
     for (size_t i = 0; i < deltas.size(); ++i) {
-        allAxes.push_back(static_cast<int>(i));
+        if (deltas[i] != 0.0) {
+            activeAxes.push_back(static_cast<int>(i));
+        }
     }
-    cmd = GalilProtocol::encodeBeginMotion(allAxes);
+    if (activeAxes.empty() && !deltas.empty()) {
+        activeAxes.push_back(0);
+    }
+    cmd = GalilProtocol::encodeBeginMotion(activeAxes);
     if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
         return false;
     }

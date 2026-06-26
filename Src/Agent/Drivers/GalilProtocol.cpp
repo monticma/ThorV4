@@ -17,11 +17,11 @@ std::string GalilProtocol::buildCsvCommand(const std::string& prefix,
                                            const std::vector<double>& values)
 {
     std::string cmd = prefix;
+    cmd += ' ';  // espace requis entre la commande et les paramètres
     for (size_t i = 0; i < values.size(); ++i) {
         if (i > 0) {
             cmd += ',';
         }
-        // Arrondir à l'entier le plus proche (le Galil travaille en counts entiers)
         long count = static_cast<long>(std::llround(values[i]));
         cmd += std::to_string(count);
     }
@@ -32,6 +32,7 @@ std::string GalilProtocol::buildExplicitCommand(const std::string& prefix,
                                                 const std::vector<double>& values)
 {
     std::string cmd = prefix;
+    cmd += ' ';  // espace requis entre la commande et les paramètres
     for (size_t i = 0; i < values.size(); ++i) {
         if (i > 0) {
             cmd += ',';
@@ -50,19 +51,48 @@ std::string GalilProtocol::buildExplicitCommand(const std::string& prefix,
 
 std::string GalilProtocol::encodeMoveAbsolute(const std::vector<double>& counts)
 {
-    return buildExplicitCommand("PA", counts);
+    // Ne pas envoyer les axes à zéro (placeholders).
+    // On construit uniquement les paires axis=valeur pour valeurs ≠ 0.
+    // Si toutes les valeurs sont à 0, on envoie quand même le 1er axe.
+    std::string cmd = "PA ";
+    bool first = true;
+    for (size_t i = 0; i < counts.size(); ++i) {
+        if (counts[i] == 0.0 && counts.size() > 1)
+            continue; // ignorer les axes placeholder
+        if (!first) cmd += ',';
+        cmd += axisLabel(static_cast<int>(i));
+        cmd += '=';
+        long count = static_cast<long>(std::llround(counts[i]));
+        cmd += std::to_string(count);
+        first = false;
+    }
+    return cmd;
 }
 
 std::string GalilProtocol::encodeMoveRelative(const std::vector<double>& deltas)
 {
-    return buildExplicitCommand("PR", deltas);
+    // Même logique que encodeMoveAbsolute : ignorer les axes à zéro
+    std::string cmd = "PR ";
+    bool first = true;
+    for (size_t i = 0; i < deltas.size(); ++i) {
+        if (deltas[i] == 0.0 && deltas.size() > 1)
+            continue;
+        if (!first) cmd += ',';
+        cmd += axisLabel(static_cast<int>(i));
+        cmd += '=';
+        long count = static_cast<long>(std::llround(deltas[i]));
+        cmd += std::to_string(count);
+        first = false;
+    }
+    return cmd;
 }
 
 std::string GalilProtocol::encodeBeginMotion(const std::vector<int>& axisIndices)
 {
-    std::string cmd = "BG";
-    for (int index : axisIndices) {
-        cmd += axisLabel(index);
+    std::string cmd = "BG ";
+    for (size_t i = 0; i < axisIndices.size(); ++i) {
+        if (i > 0) cmd += ',';
+        cmd += axisLabel(axisIndices[i]);
     }
     return cmd;
 }
@@ -85,7 +115,7 @@ std::string GalilProtocol::encodeServoHere()
 
 std::string GalilProtocol::encodeHome(int axisIndex)
 {
-    std::string cmd = "HM";
+    std::string cmd = "HM ";
     cmd += axisLabel(axisIndex);
     return cmd;
 }
@@ -117,9 +147,10 @@ std::string GalilProtocol::encodeDeceleration(const std::vector<double>& decels)
 
 std::string GalilProtocol::encodeAfterMotion(const std::vector<int>& axisIndices)
 {
-    std::string cmd = "AM";
-    for (int index : axisIndices) {
-        cmd += axisLabel(index);
+    std::string cmd = "AM ";
+    for (size_t i = 0; i < axisIndices.size(); ++i) {
+        if (i > 0) cmd += ',';
+        cmd += axisLabel(axisIndices[i]);
     }
     return cmd;
 }

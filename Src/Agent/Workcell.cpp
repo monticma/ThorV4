@@ -887,6 +887,62 @@ bool Workcell::wireComponents(EventBus* bus)
         entry.instance->setController(controller);
     }
 
+    // Passe 3 : appliquer le countsPerUnit depuis l'axisMapping du contrôleur
+    for (auto& entry : mComponents)
+    {
+        if (entry.type == "controller")
+            continue;
+
+        if (entry.controller.empty())
+            continue;
+
+        // Trouver l'entrée du contrôleur pour son axisMapping
+        for (const auto& ctrlEntry : mComponents)
+        {
+            if (ctrlEntry.id != entry.controller)
+                continue;
+
+            // Parcourir l'axisMapping du contrôleur
+            for (const auto& am : ctrlEntry.axisMapping)
+            {
+                if (am.component != entry.id)
+                    continue;
+
+                // Trouver l'axe correspondant dans le composant
+                Component* comp = entry.instance.get();
+                if (comp == nullptr)
+                    continue;
+
+                // Chercher l'axe par son nom (ex: "Theta", "Elbow", "Z")
+                // Le composant expose ses axes via des classes concrètes.
+                // On utilise un cast par type pour accéder à axes[].
+                std::vector<ComponentAxis>* axesPtr = nullptr;
+
+                if (entry.type == "robot")
+                    axesPtr = &dynamic_cast<Robot*>(comp)->axes;
+                else if (entry.type == "linear_track")
+                    axesPtr = &dynamic_cast<Track*>(comp)->axes;
+                else if (entry.type == "pre_aligner")
+                    axesPtr = &dynamic_cast<Aligner*>(comp)->axes;
+                else if (entry.type == "flipper")
+                    axesPtr = &dynamic_cast<Flipper*>(comp)->axes;
+
+                if (axesPtr == nullptr)
+                    continue;
+
+                for (auto& ax : *axesPtr)
+                {
+                    if (ax.name == am.axis)
+                    {
+                        ax.countsPerUnit = am.countsPerUnit;
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+    }
+
     mLastError.clear();
     return true;
 }
