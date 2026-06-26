@@ -229,8 +229,13 @@ bool Agent::initialize()
         workcell->startListeners();
     }
 
-    // 7. Charger le script Lua de démarrage (si configuré)
-    //    mLuaEngine.loadScriptFile("Config/Scripts/startup.lua");
+    // 7. Charger le script Lua de démarrage
+    if (!mLuaEngine.loadScriptFile("Config/Scripts/startup.lua"))
+    {
+        // Non-bloquant : le script de démarrage est optionnel
+        std::cerr << "[Agent] Warning: startup.lua not loaded: "
+                  << mLuaEngine.lastError() << std::endl;
+    }
 
     mLastError.clear();
     return true;
@@ -270,14 +275,43 @@ void Agent::shutdown()
     mLastError.clear();
 }
 
+bool Agent::executeLua(const std::string& code)
+{
+    if (!mLuaEngine.runString(code))
+    {
+        mLastError = mLuaEngine.lastError();
+        return false;
+    }
+    return true;
+}
+
 void Agent::processEvents(const std::vector<Event>& events)
 {
-    // Pour l'instant, on log les événements reçus.
-    // Plus tard : dispatcher vers les handlers appropriés
-    // (sécurité, télémétrie, scripts Lua...).
     for (const auto& event : events)
     {
-        (void)event; // éviter warning unused
+        switch (event.type)
+        {
+            case EventType::ScriptStarted:
+            case EventType::ScriptFinished:
+                // Log les événements de script
+                break;
+
+            case EventType::ScriptError:
+                std::cerr << "[Agent] Lua error: "
+                          << event.data.script.errorMessage << std::endl;
+                break;
+
+            case EventType::MotionComplete:
+                // Pourra déclencher des callbacks Lua plus tard
+                break;
+
+            case EventType::Shutdown:
+                mRunning = false;
+                break;
+
+            default:
+                break;
+        }
     }
 }
 

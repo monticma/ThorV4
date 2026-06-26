@@ -771,8 +771,36 @@ bool Workcell::loadComponents(sol::state& lua)
         if (!entry.instance)
             continue;
 
-        // Chaque composant s'enregistre dans Lua (primitives + attributs)
+        // 1. Enregistrer le type dans Lua (ex: Robot, Track...)
         entry.instance->registerInLua(lua);
+
+        // 2. Exposer l'instance comme variable globale Lua
+        //    Le nom de la variable = entry.id (ex: "robot", "track", "galil1")
+        std::string varName = entry.id;
+
+        // Associer l'instance à la variable globale selon son type
+        if (entry.type == "controller")
+            lua[varName] = dynamic_cast<Controller*>(entry.instance.get());
+        else if (entry.type == "robot")
+            lua[varName] = dynamic_cast<Robot*>(entry.instance.get());
+        else if (entry.type == "linear_track")
+            lua[varName] = dynamic_cast<Track*>(entry.instance.get());
+        else if (entry.type == "pre_aligner")
+            lua[varName] = dynamic_cast<Aligner*>(entry.instance.get());
+        else if (entry.type == "flipper")
+            lua[varName] = dynamic_cast<Flipper*>(entry.instance.get());
+        else if (entry.type == "end_effector")
+            lua[varName] = dynamic_cast<EndEffector*>(entry.instance.get());
+        else if (entry.type == "signal_tower")
+            lua[varName] = dynamic_cast<SignalTower*>(entry.instance.get());
+        else if (entry.type == "cycle_counter")
+            lua[varName] = dynamic_cast<CycleCounter*>(entry.instance.get());
+        else if (entry.type == "cassette")
+            lua[varName] = dynamic_cast<Cassette*>(entry.instance.get());
+        else if (entry.type == "process_zone")
+            lua[varName] = dynamic_cast<ProcessZone*>(entry.instance.get());
+        else
+            lua[varName] = entry.instance.get(); // fallback : Component*
     }
 
     mLastError.clear();

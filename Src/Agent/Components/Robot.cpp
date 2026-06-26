@@ -635,7 +635,7 @@ void Robot::registerInLua(sol::state& lua)
         "moveTo",        &Robot::moveTo,
         "moveJoint",     &Robot::moveJoint,
         "moveRelative",  &Robot::moveRelative,
-        "getPosition",   &Robot::getPosition,
+        "getPosition",   &Robot::getPositionLua,
         "home",          &Robot::home,
         "stopMotion",    &Robot::stopMotion,
         "emergencyStop", &Robot::emergencyStop,
@@ -645,6 +645,18 @@ void Robot::registerInLua(sol::state& lua)
         "lastError",     &Robot::lastError,
         "dump",          &Robot::dump
     );
+}
+
+// =============================================================================
+// Wrapper Lua pour getPosition (retourne x, y, z au lieu de vector&)
+// =============================================================================
+
+std::tuple<double, double, double> Robot::getPositionLua()
+{
+    std::vector<double> pos;
+    if (!getPosition(pos) || pos.size() < 3)
+        return std::make_tuple(0.0, 0.0, 0.0);
+    return std::make_tuple(pos[0], pos[1], pos[2]);
 }
 
 // =============================================================================

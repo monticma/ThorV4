@@ -46,6 +46,9 @@ Thumbs.db
 .clangd
 compile_commands.json
 
+# -------- Aura (code analysis) --------
+.aura/
+
 # -------- Temp / Misc --------
 *.log
 *.tmp

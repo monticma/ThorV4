@@ -137,6 +137,11 @@ public:
     ///        listeners, détruit la VM Lua.
     void shutdown();
 
+    /// @brief Exécute une commande Lua dans la VM.
+    /// @param code Code Lua à exécuter.
+    /// @return true si l'exécution a réussi.
+    bool executeLua(const std::string& code);
+
 private:
     /// @brief Traite les événements consommés depuis l'EventBus.
     void processEvents(const std::vector<Event>& events);

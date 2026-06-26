@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <tuple>
 #include "Component.h"
 
 #include <sol/forward.hpp>
@@ -71,6 +72,7 @@ public:
     bool moveJoint(int jointIndex, double angle, double speed);
     bool moveRelative(int jointIndex, double delta, double speed);
     bool getPosition(std::vector<double> &positionOut);
+    std::tuple<double, double, double> getPositionLua(); // wrapper pour Lua
     bool home();
     bool stopMotion();
     bool emergencyStop();
