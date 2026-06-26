@@ -90,9 +90,8 @@ std::string GalilProtocol::encodeMoveRelative(const std::vector<double>& deltas)
 std::string GalilProtocol::encodeBeginMotion(const std::vector<int>& axisIndices)
 {
     std::string cmd = "BG ";
-    for (size_t i = 0; i < axisIndices.size(); ++i) {
-        if (i > 0) cmd += ',';
-        cmd += axisLabel(axisIndices[i]);
+    for (int index : axisIndices) {
+        cmd += axisLabel(index);
     }
     return cmd;
 }
@@ -148,9 +147,8 @@ std::string GalilProtocol::encodeDeceleration(const std::vector<double>& decels)
 std::string GalilProtocol::encodeAfterMotion(const std::vector<int>& axisIndices)
 {
     std::string cmd = "AM ";
-    for (size_t i = 0; i < axisIndices.size(); ++i) {
-        if (i > 0) cmd += ',';
-        cmd += axisLabel(axisIndices[i]);
+    for (int index : axisIndices) {
+        cmd += axisLabel(index);
     }
     return cmd;
 }

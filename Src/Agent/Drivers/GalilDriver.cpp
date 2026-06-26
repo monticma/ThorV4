@@ -367,8 +367,6 @@ bool GalilDriver::servoHere()
 bool GalilDriver::home(int axisIndex)
 {
     // 1. Servo Here — activer le moteur avant le homing
-    //    SH sans argument = tous les axes, mais on ne veut que celui-ci.
-    //    On envoie d'abord SH global (simple), puis HM sur l'axe cible.
     std::string cmd = GalilProtocol::encodeServoHere();
     if (!sendAndCheck(cmd, mDefaultTimeoutMs)) {
         return false;
