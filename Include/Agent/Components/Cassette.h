@@ -3,6 +3,12 @@
 #include <vector>
 #include "Component.h"
 
+class Controller;
+namespace sol
+{
+    class state;
+}
+
 struct CassetteUnits
 {
     std::string length;
@@ -59,4 +65,19 @@ public:
     CassetteWaferSpecs waferSpecs;
     std::vector<IoPinRequired> ioPinsRequired;
     CassetteMetadata metadata;
+
+    // Primitives
+    bool isPresent();
+    int  getSlotCount() const;
+    bool getSlotStatus(int slotNumber, bool& waferPresentOut);
+    bool isSlotOccupied(int slotNumber);  // wrapper Lua : retourne true si occupé
+    bool scanSlots(int fromSlot, int toSlot, std::vector<bool>& resultsOut);
+
+    void setController(Controller* controller) override;
+    void registerInLua(sol::state& lua) override;
+
+private:
+    Controller* mController = nullptr;
+    int getIoPin(const std::string& idPattern) const;
+    std::vector<bool> mSlotStatus; // cache du scan
 };

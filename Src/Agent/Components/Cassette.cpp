@@ -1,8 +1,12 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/Cassette.h"
+#include "Agent/Components/Controller.h"
 
 using json = nlohmann::json;
 
@@ -178,4 +182,124 @@ void Cassette::dump() const
         }
     }
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives
+// =============================================================================
+
+void Cassette::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+int Cassette::getIoPin(const std::string& idPattern) const
+{
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        if (ioPinsRequired[i].id.find(idPattern) != std::string::npos)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool Cassette::isPresent()
+{
+    if (mController == nullptr) {
+        mLastError = "Cassette::isPresent: no controller";
+        return false;
+    }
+
+    int pin = getIoPin("cassettePresence");
+    if (pin < 0) {
+        mLastError = "Cassette::isPresent: no presence sensor configured";
+        return false;
+    }
+
+    // waitDigitalInput avec timeout 0 = lecture immédiate
+    return mController->waitDigitalInput(pin, true, 0);
+}
+
+int Cassette::getSlotCount() const
+{
+    return geometry.slotCount;
+}
+
+bool Cassette::getSlotStatus(int slotNumber, bool& waferPresentOut)
+{
+    if (slotNumber < 1 || slotNumber > geometry.slotCount) {
+        mLastError = "Cassette::getSlotStatus: invalid slot " +
+                     std::to_string(slotNumber);
+        return false;
+    }
+
+    if (slotNumber <= static_cast<int>(mSlotStatus.size())) {
+        waferPresentOut = mSlotStatus[slotNumber - 1];
+        return true;
+    }
+
+    waferPresentOut = false;
+    return true;
+}
+
+bool Cassette::isSlotOccupied(int slotNumber)
+{
+    bool occupied = false;
+    getSlotStatus(slotNumber, occupied);
+    return occupied;
+}
+
+bool Cassette::scanSlots(int fromSlot, int toSlot,
+                          std::vector<bool>& resultsOut)
+{
+    resultsOut.clear();
+
+    if (mController == nullptr) {
+        mLastError = "Cassette::scanSlots: no controller";
+        return false;
+    }
+
+    if (fromSlot < 1) fromSlot = 1;
+    if (toSlot > geometry.slotCount) toSlot = geometry.slotCount;
+    if (fromSlot > toSlot) {
+        mLastError = "Cassette::scanSlots: fromSlot > toSlot";
+        return false;
+    }
+
+    int count = toSlot - fromSlot + 1;
+    resultsOut.resize(count, false);
+
+    // Le scan réel nécessite le laser (beamBreak sensor) et le mouvement Z.
+    // Pour l'instant, on simule : tous les slots sont vides.
+    // L'implémentation complète sera faite quand le scanner laser sera
+    // intégré avec le mouvement du robot.
+    for (int i = 0; i < count; ++i) {
+        resultsOut[i] = false;
+    }
+
+    // Mettre à jour le cache
+    mSlotStatus.resize(geometry.slotCount, false);
+    for (int i = 0; i < count; ++i) {
+        int slotIdx = fromSlot + i - 1;
+        if (slotIdx < static_cast<int>(mSlotStatus.size()))
+            mSlotStatus[slotIdx] = resultsOut[i];
+    }
+
+    return true;
+}
+
+void Cassette::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<Cassette>("Cassette",
+        sol::constructors<Cassette()>(),
+        "model",          sol::readonly(&Cassette::model),
+        "standard",       sol::readonly(&Cassette::standard),
+        "loadFromFile",   &Cassette::loadFromFile,
+        "isPresent",      &Cassette::isPresent,
+        "getSlotCount",   &Cassette::getSlotCount,
+        "isSlotOccupied", &Cassette::isSlotOccupied,
+        "scanSlots",      &Cassette::scanSlots,
+        "lastError",      &Cassette::lastError,
+        "dump",           &Cassette::dump
+    );
 }

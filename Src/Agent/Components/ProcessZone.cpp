@@ -1,8 +1,12 @@
 #include <fstream>
+#include <thread>
+#include <chrono>
 
 #include <nlohmann/json.hpp>
+#include <sol/sol.hpp>
 
 #include "Agent/Components/ProcessZone.h"
+#include "Agent/Components/Controller.h"
 
 using json = nlohmann::json;
 
@@ -150,4 +154,144 @@ void ProcessZone::dump() const
         }
     }
     dumpStringVector("metadata.notes", metadata.notes, 4);
+}
+
+// =============================================================================
+// Primitives (handshake I/O 5-wire)
+// =============================================================================
+
+void ProcessZone::setController(Controller* controller)
+{
+    mController = controller;
+}
+
+int ProcessZone::getIoPin(const std::string& idPattern) const
+{
+    for (size_t i = 0; i < ioPinsRequired.size(); ++i)
+    {
+        if (ioPinsRequired[i].id.find(idPattern) != std::string::npos)
+            return static_cast<int>(i);
+    }
+    return -1;
+}
+
+bool ProcessZone::isReady()
+{
+    if (mController == nullptr) {
+        mLastError = "ProcessZone::isReady: no controller";
+        return false;
+    }
+
+    int pin = getIoPin("ready");
+    if (pin < 0) {
+        mLastError = "ProcessZone::isReady: no 'ready' pin configured";
+        return false;
+    }
+
+    return mController->waitDigitalInput(pin, true, 0);
+}
+
+bool ProcessZone::startProcess()
+{
+    if (mController == nullptr) {
+        mLastError = "ProcessZone::startProcess: no controller";
+        return false;
+    }
+
+    int pin = getIoPin("startProcess");
+    if (pin < 0) {
+        mLastError = "ProcessZone::startProcess: no 'startProcess' pin";
+        return false;
+    }
+
+    // Impulsion sur la sortie startProcess
+    if (!mController->setDigitalOutput(pin, true)) {
+        mLastError = "ProcessZone::startProcess: failed to assert pin";
+        return false;
+    }
+
+    // Maintenir le signal 100 ms
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    if (!mController->setDigitalOutput(pin, false)) {
+        mLastError = "ProcessZone::startProcess: failed to deassert pin";
+        return false;
+    }
+
+    return true;
+}
+
+bool ProcessZone::waitProcessDone(int timeoutMs)
+{
+    if (mController == nullptr) {
+        mLastError = "ProcessZone::waitProcessDone: no controller";
+        return false;
+    }
+
+    int donePin = getIoPin("done");
+    int errorPin = getIoPin("error");
+
+    if (donePin < 0) {
+        mLastError = "ProcessZone::waitProcessDone: no 'done' pin";
+        return false;
+    }
+
+    int elapsed = 0;
+    const int pollMs = 50;
+
+    while (elapsed < timeoutMs)
+    {
+        // Vérifier le signal "done"
+        if (mController->waitDigitalInput(donePin, true, 0))
+            return true;
+
+        // Vérifier le signal "error"
+        if (errorPin >= 0 && mController->waitDigitalInput(errorPin, true, 0))
+        {
+            mLastError = "ProcessZone: error signal received";
+            return false;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(pollMs));
+        elapsed += pollMs;
+    }
+
+    mLastError = "ProcessZone::waitProcessDone: timeout";
+    return false;
+}
+
+bool ProcessZone::hasError()
+{
+    if (mController == nullptr) return false;
+
+    int pin = getIoPin("error");
+    if (pin < 0) return false;
+
+    return mController->waitDigitalInput(pin, true, 0);
+}
+
+bool ProcessZone::resetError()
+{
+    // Les erreurs de process zone sont gérées par le protocole hardware.
+    // Pour réarmer, on peut faire un cycle startProcess sans wafer
+    // ou couper/rétablir l'alimentation. Ici, on ne fait rien.
+    mLastError.clear();
+    return true;
+}
+
+void ProcessZone::registerInLua(sol::state& lua)
+{
+    lua.new_usertype<ProcessZone>("ProcessZone",
+        sol::constructors<ProcessZone()>(),
+        "model",           sol::readonly(&ProcessZone::model),
+        "manufacturer",    sol::readonly(&ProcessZone::manufacturer),
+        "loadFromFile",    &ProcessZone::loadFromFile,
+        "isReady",         &ProcessZone::isReady,
+        "startProcess",    &ProcessZone::startProcess,
+        "waitProcessDone", &ProcessZone::waitProcessDone,
+        "hasError",        &ProcessZone::hasError,
+        "resetError",      &ProcessZone::resetError,
+        "lastError",       &ProcessZone::lastError,
+        "dump",            &ProcessZone::dump
+    );
 }

@@ -6,6 +6,12 @@
 
 #include "Component.h"
 
+class Controller;
+namespace sol
+{
+    class state;
+}
+
 // -----------------------------------------------------------------------------
 // ProcessZone : chambre de process (ex: GenericChamber, CVD, Etch)
 // -----------------------------------------------------------------------------
@@ -67,4 +73,18 @@ public:
     ProcessZonePhysical        physical;
     std::vector<IoPinRequired> ioPinsRequired;
     ProcessZoneMetadata        metadata;
+
+    // Primitives (handshake I/O 5-wire)
+    bool isReady();
+    bool startProcess();
+    bool waitProcessDone(int timeoutMs);
+    bool hasError();
+    bool resetError();
+
+    void setController(Controller* controller) override;
+    void registerInLua(sol::state& lua) override;
+
+private:
+    Controller* mController = nullptr;
+    int getIoPin(const std::string& idPattern) const;
 };
