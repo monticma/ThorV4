@@ -775,10 +775,8 @@ bool Workcell::loadComponents(sol::state& lua)
         entry.instance->registerInLua(lua);
 
         // 2. Exposer l'instance comme variable globale Lua
-        //    Le nom de la variable = entry.id (ex: "robot", "track", "galil1")
         std::string varName = entry.id;
 
-        // Associer l'instance à la variable globale selon son type
         if (entry.type == "controller")
             lua[varName] = dynamic_cast<Controller*>(entry.instance.get());
         else if (entry.type == "robot")
@@ -800,8 +798,36 @@ bool Workcell::loadComponents(sol::state& lua)
         else if (entry.type == "process_zone")
             lua[varName] = dynamic_cast<ProcessZone*>(entry.instance.get());
         else
-            lua[varName] = entry.instance.get(); // fallback : Component*
+            lua[varName] = entry.instance.get();
     }
+
+    // 3. Exposer les teach points comme table Lua globale "tp"
+    sol::table tpTable = lua.create_table();
+    for (const auto& point : mTeachPointCache)
+    {
+        sol::table pt = lua.create_table();
+        pt["name"] = point.name;
+        pt["componentId"] = point.componentId;
+        pt["isTaught"] = point.isTaught;
+        if (point.coordinateFrame == "joint" && !point.jointPositions.empty())
+        {
+            // Exposer les positions articulaires
+            sol::table joints = lua.create_table();
+            for (size_t i = 0; i < point.jointPositions.size(); ++i)
+            {
+                joints[static_cast<int>(i) + 1] = point.jointPositions[i];
+            }
+            pt["joints"] = joints;
+        }
+        if (point.isTaught)
+        {
+            pt["x"] = point.cartesianX;
+            pt["y"] = point.cartesianY;
+            pt["z"] = point.cartesianZ;
+        }
+        tpTable[point.name] = pt;
+    }
+    lua["tp"] = tpTable;
 
     mLastError.clear();
     return true;
@@ -987,4 +1013,48 @@ void Workcell::shutdown()
     }
 
     mLastError.clear();
+}
+
+// =============================================================================
+// Teach Points
+// =============================================================================
+
+void Workcell::populateTeachPoints(Database* db)
+{
+    if (db == nullptr) return;
+
+    mTeachPointCache.clear();
+
+    // Parcourir tous les composants et leurs teach points déclarés
+    for (const auto& entry : mComponents)
+    {
+        for (const auto& tpPair : entry.teachPoints)
+        {
+            const std::string& pointName = tpPair.first;   // ex: "home"
+            const TeachPoint& tpDef = tpPair.second;       // dbKey, coordinateFrame...
+
+            // Créer le point dans la DB s'il n'existe pas
+            std::string dbKey = tpDef.dbKey.empty() ? pointName : tpDef.dbKey;
+            db->createTeachPointIfNeeded(dbKey, entry.id, entry.type,
+                                          tpDef.coordinateFrame);
+        }
+    }
+
+    // Charger tous les teach points depuis la DB dans le cache
+    db->loadAllTeachPoints(mTeachPointCache);
+}
+
+const CachedTeachPoint* Workcell::findTeachPoint(const std::string& name) const
+{
+    for (const auto& tp : mTeachPointCache)
+    {
+        if (tp.name == name)
+            return &tp;
+    }
+    return nullptr;
+}
+
+const std::vector<CachedTeachPoint>& Workcell::getTeachPointCache() const
+{
+    return mTeachPointCache;
 }

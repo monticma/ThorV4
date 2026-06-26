@@ -49,6 +49,11 @@ compile_commands.json
 # -------- Aura (code analysis) --------
 .aura/
 
+# -------- Database (runtime) --------
+Database/*.db
+Database/*.db-shm
+Database/*.db-wal
+
 # -------- Temp / Misc --------
 *.log
 *.tmp

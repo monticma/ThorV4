@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Components/Component.h"
+#include "Agent/Database.h"
 
 class EventBus;
 namespace sol
@@ -347,6 +348,21 @@ public:
     /// @brief Arrête tous les composants et déconnecte les contrôleurs.
     void shutdown();
 
+    // --- Teach points ---
+
+    /// @brief Pré-peuple les teach points depuis le WorkCell.json dans la DB.
+    ///        Charge aussi tous les points dans le cache mémoire.
+    /// @param db Base de données ouverte.
+    void populateTeachPoints(Database* db);
+
+    /// @brief Cherche un teach point dans le cache mémoire.
+    /// @param name Nom du point (dbKey du WorkCell.json).
+    /// @return Pointeur vers le point, ou nullptr.
+    const CachedTeachPoint* findTeachPoint(const std::string& name) const;
+
+    /// @brief Retourne tout le cache des teach points.
+    const std::vector<CachedTeachPoint>& getTeachPointCache() const;
+
     // --- Champs racine ---
     std::string version;
     std::string fileType;
@@ -362,6 +378,7 @@ public:
 
 private:
     std::vector<WorkcellComponentEntry> mComponents;
+    std::vector<CachedTeachPoint> mTeachPointCache;
     std::string mLastError;
     EventBus* mEventBus = nullptr;   // stocké pour startListeners()
 };

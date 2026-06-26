@@ -2,16 +2,18 @@ thorLog("INFO","MyScript.lua loaded")
 if robot then
     thorLog("INFO","Robot model: " .. robot.model)
 
-    -- moveTo direct (moteurs déjà ON via l'init du contrôleur)
-    local ok = robot:moveTo(100, 100, 100, 50)
-    thorLog("INFO", "moveTo() = " .. tostring(ok))
-    if not ok then
-        thorLog("ERROR", "moveTo failed: " .. robot:lastError())
+    -- Lister les teach points
+    if tp then
+        thorLog("INFO", "Teach points disponibles:")
+        for name, point in pairs(tp) do
+            local taught = point.isTaught and "TAUGHT" or "empty"
+            thorLog("INFO", "  tp." .. name .. " [" .. taught .. "]")
+        end
     end
 
-    -- Attendre
-    robot:waitMotionDone(3000)
-
+    -- moveTo avec coordonnées directes
+    local ok = robot:moveTo(100, 100, 100, 50)
+    thorLog("INFO", "moveTo(100,100,100) = " .. tostring(ok))
     local x, y, z = robot:getPosition()
     print("Robot moved to position: " .. x .. ", " .. y .. ", " .. z)
 else

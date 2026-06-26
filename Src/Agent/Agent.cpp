@@ -201,7 +201,23 @@ bool Agent::initialize()
     // 3. Enregistrer les fonctions globales Lua (thor.log, thor.publish)
     //    déjà fait dans LuaEngine::initialize()
 
-    // 4. Workcell : enregistrer les composants dans Lua
+    // 4. Base de données : ouvrir et pré-peupler les teach points
+    if (workcell)
+    {
+        std::string dbName = workcell->cellId;
+        if (dbName.empty()) dbName = "ThorV4";
+        if (!mDatabase.open(dbName))
+        {
+            mLastError = "Agent::initialize: Database open failed: "
+                        + mDatabase.lastError();
+            return false;
+        }
+
+        // Pré-peupler les teach points depuis le WorkCell.json dans la DB
+        workcell->populateTeachPoints(&mDatabase);
+    }
+
+    // 5. Workcell : enregistrer les composants (et teach points) dans Lua
     if (workcell)
     {
         if (!workcell->loadComponents(mLuaEngine.state()))
@@ -212,7 +228,7 @@ bool Agent::initialize()
         }
     }
 
-    // 5. Workcell : câbler les composants (Controller TCP + setController)
+    // 6. Workcell : câbler les composants (Controller TCP + setController)
     if (workcell)
     {
         if (!workcell->wireComponents(&mEventBus))
@@ -223,13 +239,13 @@ bool Agent::initialize()
         }
     }
 
-    // 6. Workcell : démarrer les listeners asynchrones (Galil port 2324)
+    // 7. Workcell : démarrer les listeners asynchrones (Galil port 2324)
     if (workcell)
     {
         workcell->startListeners();
     }
 
-    // 7. Charger le script Lua de démarrage
+    // 8. Charger le script Lua de démarrage
     if (!mLuaEngine.loadScriptFile("Config/Scripts/startup.lua"))
     {
         // Non-bloquant : le script de démarrage est optionnel

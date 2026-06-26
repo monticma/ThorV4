@@ -8,6 +8,7 @@
 #include "Workcell.h"
 #include "Core/EventBus.h"
 #include "Agent/Scripting/LuaEngine.h"
+#include "Agent/Database.h"
 
 // -----------------------------------------------------------------------------
 // AgentConfig : lecture du fichier Config/Agent.json
@@ -122,6 +123,9 @@ public:
     /// @brief Retourne une référence vers le LuaEngine.
     LuaEngine* getLuaEngine() { return &mLuaEngine; }
 
+    /// @brief Retourne une référence vers la base de données.
+    Database* getDatabase() { return &mDatabase; }
+
     // --- Cycle de vie V4 ---
 
     /// @brief Initialise tous les sous-systèmes : EventBus, LuaEngine,
@@ -180,6 +184,7 @@ private:
     std::unique_ptr<Workcell> workcell;
     EventBus  mEventBus;
     LuaEngine mLuaEngine;
+    Database  mDatabase;
 
     std::string mLastError;
     std::string mLastFilePath;

@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dépendances système
 find_package(OpenSSL REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 # ------------------------------------------------------------------------------
 # Vendored third-party libraries (nlohmann/json, Lua, CivetWeb, etc.)
@@ -18,6 +19,7 @@ add_subdirectory(Vendor)
 add_library(ThorLib STATIC
     Src/Core/EventBus.cpp
     Src/Agent/Agent.cpp
+    Src/Agent/Database.cpp
     Src/Agent/Workcell.cpp
     Src/Agent/Scripting/LuaEngine.cpp
     Src/Agent/Components/Component.cpp
@@ -43,6 +45,7 @@ target_include_directories(ThorLib PUBLIC
 target_link_libraries(ThorLib PUBLIC
     thor_nlohmann   # nlohmann/json.hpp (header-only)
     thor_sol2       # sol2 + Lua 5.4.7 (header-only + static lib)
+    SQLite::SQLite3 # SQLite3 (system)
 )
 
 # ------------------------------------------------------------------------------
